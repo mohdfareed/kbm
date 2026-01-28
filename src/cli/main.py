@@ -1,10 +1,17 @@
 """CLI entry point."""
 
-
-def main() -> None:
-    """Run the KBM CLI."""
-    print("hello from kbm cli")
+import typer
+from cli import APP_NAME
 
 
-if __name__ == "__main__":
-    main()
+app = typer.Typer()
+
+
+@app.callback()
+def callback():
+    """Main entry point for the CLI application."""
+
+@app.command()
+def test():
+    """Test command to verify the CLI application."""
+    print(f"Welcome to {APP_NAME}!")

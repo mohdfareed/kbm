@@ -16,6 +16,9 @@
   },
   "cSpell.words": [
     "pipx",
+    "pydantic",
+    "pytest",
+    "typer",
     "venv"
   ]
 }
