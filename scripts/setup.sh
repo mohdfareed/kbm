@@ -7,4 +7,5 @@ if ! command -v uv &> /dev/null; then
 fi
 
 cd "$(dirname "$0")/.."
+uv lock --upgrade
 uv sync

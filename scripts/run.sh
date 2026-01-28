@@ -2,5 +2,5 @@
 set -e
 
 cd "$(dirname "$0")/.."
-./scripts/bootstrap.sh
+uv sync --quiet
 exec uv run kbm "$@"

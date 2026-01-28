@@ -5,31 +5,26 @@ KBM is a unified memory system that any LLM tool can read from and write to via 
 ## Requirements
 
 - Python 3.12+
+- [`pipx`](https://pipxproject.github.io/pipx/).
+
+### Development
+
+- [`uv`](https://docs.astral.sh/uv/).
 
 ## Installation
 
 ```sh
 pipx install kbm
+kbm --help
 ```
 
-## Development
-
-### Requirements
-
-- [`uv`](https://docs.astral.sh/uv/).
+### Development
 
 ```sh
 git clone https://github.com/mohdfareed/kbm && cd kbm
-./scripts/bootstrap.sh
-uv run kbm
+./scripts/setup.sh # set up development environment
+./scripts/run.sh --help
 ```
-
-**Useful `uv` commands:**
-
-- `uv run kbm <args>` - Run KBM.
-- `uv add [--dev] <pkg>` - Add a new dependency.
-- `uv sync` - Sync dependencies from lock file.
-- `uv lock` - Regenerate lock file.
 
 ## License
 
