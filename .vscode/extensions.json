@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "donjayamanne.python-extension-pack",
+    "charliermarsh.ruff",
+    "timonwong.shellcheck",
+    "yzhang.markdown-all-in-one",
+    "streetsidesoftware.code-spell-checker",
+    "github.copilot-chat",
+  ]
+}

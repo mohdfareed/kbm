@@ -1,5 +1,21 @@
 {
-    "cSpell.words": [
-        "pipx"
-    ]
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "ruff.lineLength": 79,
+  "python.analysis.typeCheckingMode": "standard",
+  "[json]": {
+    "editor.tabSize": 2
+  },
+  "[toml]": {
+    "editor.tabSize": 2
+  },
+  "[yaml]": {
+    "editor.tabSize": 2
+  },
+  "cSpell.words": [
+    "pipx",
+    "venv"
+  ]
 }
