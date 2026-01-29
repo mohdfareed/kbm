@@ -4,10 +4,10 @@ __all__ = [
     "APP_NAME",
     "DESCRIPTION",
     "VERSION",
-    "Engine",
-    "Settings",
     "ChatHistoryConfig",
+    "Engine",
     "RAGAnythingConfig",
+    "Settings",
     "get_settings",
     "init_settings",
 ]
@@ -134,9 +134,7 @@ _settings: Settings | None = None
 def get_settings() -> Settings:
     """Get the current settings singleton."""
     if _settings is None:
-        raise RuntimeError(
-            "Settings not initialized. Call init_settings() first."
-        )
+        raise RuntimeError("Settings not initialized. Call init_settings() first.")
     return _settings
 
 
@@ -145,9 +143,7 @@ def init_settings(config_path: Path | None = None) -> Settings:
     global _settings
 
     # Find config file if not provided
-    config_file = (
-        config_path.resolve() if config_path else find_file(CONFIG_FILES)
-    )
+    config_file = config_path.resolve() if config_path else find_file(CONFIG_FILES)
 
     # Load from file based on type, or default
     if config_file:

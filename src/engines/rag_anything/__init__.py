@@ -35,9 +35,7 @@ class RAGAnythingEngine:
 
         # Get API credentials (env vars take precedence)
         self._api_key = os.environ.get("OPENAI_API_KEY", self.config.api_key)
-        self._base_url = os.environ.get(
-            "OPENAI_BASE_URL", self.config.base_url
-        )
+        self._base_url = os.environ.get("OPENAI_BASE_URL", self.config.base_url)
 
         if not self._api_key:
             raise ValueError(
@@ -150,8 +148,7 @@ class RAGAnythingEngine:
         Note: RAG-Anything doesn't have a direct delete API.
         """
         raise NotImplementedError(
-            "Delete is not supported by RAG-Anything. "
-            "Remove the working_dir to reset."
+            "Delete is not supported by RAG-Anything. Remove the working_dir to reset."
         )
 
     async def list_records(self, **kwargs: Any) -> list[dict]:

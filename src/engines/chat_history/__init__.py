@@ -57,9 +57,7 @@ class ChatHistoryEngine:
 
         output = []
         for r in results:
-            output.append(
-                f"[{r['id']}] {r['created_at']}\n{r['content'][:200]}..."
-            )
+            output.append(f"[{r['id']}] {r['created_at']}\n{r['content'][:200]}...")
         return "\n\n".join(output)
 
     async def insert(self, content: str, **kwargs: Any) -> str:
@@ -147,9 +145,7 @@ class ChatHistoryEngine:
     def _save_record(self, record_id: str, data: dict) -> None:
         """Save a record to disk."""
         path = self._record_path(record_id)
-        path.write_text(
-            json.dumps(data, indent=2, default=str), encoding="utf-8"
-        )
+        path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
     def _delete_record(self, record_id: str) -> bool:
         """Delete a record from disk."""

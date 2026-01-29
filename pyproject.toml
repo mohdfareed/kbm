@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Persistent memory for LLMs, accessible via MCP."
 readme = "README.md"
 
+# MARK: - Dependencies
+
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=3.0.0b1",
@@ -14,9 +16,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.14",
+    "pyright>=1.1",
     "pytest>=9.0",
+    "ruff>=0.14",
 ]
+
+# MARK: - Build System
 
 [project.scripts]
 kbm = "app:cli"
@@ -27,3 +32,19 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = ["app", "engines"]
+
+# MARK: - Tool Configuration
+
+[tool.ruff]
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "I", "W", "RUF"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

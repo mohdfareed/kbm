@@ -46,7 +46,9 @@ def register(mcp: FastMCP) -> None:
         doc_id: Annotated[
             str | None,
             Field(
-                description="Optional custom document ID (auto-generated if not provided)"
+                description="""
+                Optional custom document ID (auto-generated if not provided)
+                """
             ),
         ] = None,
     ) -> str:
@@ -65,7 +67,9 @@ def register(mcp: FastMCP) -> None:
         doc_id: Annotated[
             str | None,
             Field(
-                description="Optional custom document ID (auto-generated if not provided)"
+                description="""
+                Optional custom document ID (auto-generated if not provided)
+                """
             ),
         ] = None,
     ) -> str:
@@ -94,9 +98,7 @@ def register(mcp: FastMCP) -> None:
         limit: Annotated[
             int, Field(description="Maximum number of records to return")
         ] = 100,
-        offset: Annotated[
-            int, Field(description="Number of records to skip")
-        ] = 0,
+        offset: Annotated[int, Field(description="Number of records to skip")] = 0,
     ) -> list[dict]:
         """List records in the knowledge base.
 

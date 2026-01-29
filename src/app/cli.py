@@ -55,9 +55,7 @@ def callback(
 def start() -> None:
     """Start the MCP server."""
     settings = get_settings()
-    typer.echo(
-        f"Starting {settings.server_name} server (engine={settings.engine})..."
-    )
+    typer.echo(f"Starting {settings.server_name} server (engine={settings.engine})...")
 
     mcp = init_server()
     start_server(mcp, Transport.stdio)

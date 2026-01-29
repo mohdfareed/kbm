@@ -1,6 +1,6 @@
 """MCP server."""
 
-__all__ = ["init_server", "start_server", "Transport"]
+__all__ = ["Transport", "init_server", "start_server"]
 
 from enum import Enum
 

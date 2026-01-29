@@ -40,9 +40,7 @@ def query(
 @app.command()
 def insert(
     content: Annotated[str, typer.Argument(help="Text content to insert")],
-    doc_id: Annotated[
-        str | None, typer.Option(help="Custom document ID")
-    ] = None,
+    doc_id: Annotated[str | None, typer.Option(help="Custom document ID")] = None,
 ) -> None:
     """Insert text content into the knowledge base."""
     engine = get_engine()
@@ -53,9 +51,7 @@ def insert(
 @app.command()
 def insert_file(
     file_path: Annotated[str, typer.Argument(help="Path to file to insert")],
-    doc_id: Annotated[
-        str | None, typer.Option(help="Custom document ID")
-    ] = None,
+    doc_id: Annotated[str | None, typer.Option(help="Custom document ID")] = None,
 ) -> None:
     """Insert a file into the knowledge base."""
     engine = get_engine()
@@ -75,9 +71,7 @@ def delete(
 
 @app.command("list")
 def list_records(
-    limit: Annotated[
-        int, typer.Option(help="Maximum records to return")
-    ] = 100,
+    limit: Annotated[int, typer.Option(help="Maximum records to return")] = 100,
     offset: Annotated[int, typer.Option(help="Records to skip")] = 0,
 ) -> None:
     """List records in the knowledge base."""
