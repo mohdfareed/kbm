@@ -1,14 +1,12 @@
 """MCP server."""
 
-__all__ = ["mcp", "start", "Transport"]
+__all__ = ["init_server", "start_server", "Transport"]
 
 from enum import Enum
 
 from fastmcp import FastMCP
 
-from app.config import settings
-
-mcp = FastMCP(settings.server_name)
+from app.config import Engine, get_settings
 
 
 class Transport(str, Enum):
@@ -19,22 +17,26 @@ class Transport(str, Enum):
     stream = "streamable-http"
 
 
-# Register engine-specific tools
-if settings.engine == "chat-history":
-    from engines.chat_history.tools import register
+def init_server() -> FastMCP:
+    """Initialize and configure MCP server."""
+    settings = get_settings()
+    mcp = FastMCP(settings.server_name)
 
-    register(mcp)
-elif settings.engine == "rag-anything":
-    from engines.rag_anything.tools import register
+    # Register engine-specific tools
+    if settings.engine == Engine.chat_history:
+        from engines.chat_history.tools import register
 
-    register(mcp)
-else:
-    raise ValueError(f"Unknown engine: {settings.engine}")
+        register(mcp)
+    elif settings.engine == Engine.rag_anything:
+        from engines.rag_anything.tools import register
+
+        register(mcp)
+    else:
+        raise ValueError(f"Unknown engine: {settings.engine}")
+
+    return mcp
 
 
-# MARK: Server methods
-
-
-def start(transport: Transport) -> None:
+def start_server(mcp: FastMCP, transport: Transport) -> None:
     """Start the MCP server with the specified transport."""
     mcp.run(transport=transport.value)

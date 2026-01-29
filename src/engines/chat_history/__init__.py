@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.config import settings
+from app.config import get_settings
 
 _engine: "ChatHistoryEngine | None" = None
 
@@ -26,6 +26,7 @@ class ChatHistoryEngine:
 
     def __init__(self) -> None:
         """Initialize the chat history engine."""
+        settings = get_settings()
         self.config = settings.chat_history
         self.data_dir = settings.resolve_data_path(self.config.data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)

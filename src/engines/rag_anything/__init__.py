@@ -10,7 +10,7 @@ from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 from raganything import RAGAnything, RAGAnythingConfig
 
-from app.config import settings
+from app.config import get_settings
 
 _engine: "RAGAnythingEngine | None" = None
 
@@ -28,6 +28,7 @@ class RAGAnythingEngine:
 
     def __init__(self) -> None:
         """Initialize the RAG-Anything engine."""
+        settings = get_settings()
         self.config = settings.rag_anything
         self.working_dir = settings.resolve_data_path(self.config.data_dir)
         self.working_dir.mkdir(parents=True, exist_ok=True)

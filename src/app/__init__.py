@@ -1,7 +1,6 @@
 """KBM application."""
 
-__all__ = ["cli", "mcp", "settings"]
+__all__ = ["cli", "get_settings"]
 
 from app.cli import cli
-from app.config import settings
-from app.server import mcp
+from app.config import get_settings
