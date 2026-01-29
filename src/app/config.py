@@ -53,7 +53,7 @@ _model_config = SettingsConfigDict(
 )
 
 
-# MARK: Settings models
+# MARK: Engine settings
 
 
 class ChatHistoryConfig(BaseModel):
@@ -82,6 +82,9 @@ class RAGAnythingConfig(BaseModel):
     enable_equation_processing: bool = True
 
 
+# MARK: App settings
+
+
 class Settings(BaseSettings):
     """Application settings."""
 
@@ -99,6 +102,17 @@ class Settings(BaseSettings):
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
 
+    def resolve_data_path(self, path: str) -> Path:
+        """Resolve a data path (relative to app data_dir, or absolute)."""
+        p = Path(path)
+        return p if p.is_absolute() else self.data_dir / p
+
+    @model_validator(mode="after")
+    def ensure_data_dir(self) -> "Settings":
+        """Create app data directory."""
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        return self
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -114,23 +128,14 @@ class Settings(BaseSettings):
             env_settings,
             dotenv_settings,
         ]
+
         if _config_file and _config_file.suffix == ".json":
             sources.append(JsonConfigSettingsSource(settings_cls))
         elif _config_file and _config_file.suffix in (".yaml", ".yml"):
             sources.append(YamlConfigSettingsSource(settings_cls))
+
         sources.append(file_secret_settings)
         return tuple(sources)
-
-    @model_validator(mode="after")
-    def ensure_data_dir(self) -> "Settings":
-        """Create app data directory."""
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        return self
-
-    def resolve_data_path(self, path: str) -> Path:
-        """Resolve a data path (relative to app data_dir, or absolute)."""
-        p = Path(path)
-        return p if p.is_absolute() else self.data_dir / p
 
 
 settings = Settings()

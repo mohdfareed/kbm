@@ -12,7 +12,7 @@ from engines.chat_history import get_engine
 
 
 def register(mcp: FastMCP) -> None:
-    """Register chat history tools with the MCP server.""" ""
+    """Register chat history tools with the MCP server."""
 
     @mcp.tool
     def query(
