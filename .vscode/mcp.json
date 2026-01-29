@@ -1,0 +1,12 @@
+{
+	"servers": {
+		"kbm-dev": {
+			"type": "stdio",
+			"command": "./scripts/run.sh",
+			"args": [
+				"start"
+			]
+		}
+	},
+	"inputs": []
+}

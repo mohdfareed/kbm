@@ -3,6 +3,7 @@
 import typer
 
 from config import APP_NAME, DESCRIPTION
+from server import Transport
 
 app = typer.Typer(name=APP_NAME, help=DESCRIPTION)
 
@@ -14,6 +15,8 @@ def callback():
 
 
 @app.command()
-def test():
-    """Test command to verify the CLI application."""
-    print(f"Welcome to {APP_NAME}!")
+def start(transport: Transport = Transport.stdio):
+    """Start the MCP server."""
+    from server import start as start_server
+
+    start_server(transport)

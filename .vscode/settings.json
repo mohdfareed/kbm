@@ -18,6 +18,7 @@
     "pipx",
     "pydantic",
     "pytest",
+    "streamable",
     "typer",
     "venv"
   ]
