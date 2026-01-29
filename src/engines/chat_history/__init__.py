@@ -27,7 +27,7 @@ class ChatHistoryEngine:
     def __init__(self) -> None:
         """Initialize the chat history engine."""
         self.config = settings.chat_history
-        self.data_dir = Path(self.config.data_dir).expanduser().resolve()
+        self.data_dir = settings.resolve_data_path(self.config.data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     # MARK: - Public methods
