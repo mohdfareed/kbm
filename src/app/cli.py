@@ -13,7 +13,11 @@ from app.server import Transport
 cli = typer.Typer(name=APP_NAME, help=DESCRIPTION)
 
 # Register engine-specific commands
-if settings.engine == "rag-anything":
+if settings.engine == "chat-history":
+    from engines.chat_history.commands import app as memory_app
+
+    cli.add_typer(memory_app)
+elif settings.engine == "rag-anything":
     from engines.rag_anything.commands import app as memory_app
 
     cli.add_typer(memory_app)

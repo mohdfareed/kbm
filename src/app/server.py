@@ -20,7 +20,11 @@ class Transport(str, Enum):
 
 
 # Register engine-specific tools
-if settings.engine == "rag-anything":
+if settings.engine == "chat-history":
+    from engines.chat_history.tools import register
+
+    register(mcp)
+elif settings.engine == "rag-anything":
     from engines.rag_anything.tools import register
 
     register(mcp)

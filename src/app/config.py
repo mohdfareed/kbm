@@ -6,11 +6,13 @@ __all__ = [
     "VERSION",
     "settings",
     "Settings",
+    "ChatHistoryConfig",
     "RAGAnythingConfig",
 ]
 
 from importlib.metadata import metadata, version
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,6 +46,12 @@ _model_config = SettingsConfigDict(
 # MARK: Settings models
 
 
+class ChatHistoryConfig(BaseModel):
+    """Chat history engine settings."""
+
+    data_dir: str = "./data/chat-history"
+
+
 class RAGAnythingConfig(BaseModel):
     """RAG-Anything engine settings."""
 
@@ -62,9 +70,10 @@ class Settings(BaseSettings):
 
     # Application settings
     server_name: str = APP_NAME
-    engine: str = "rag-anything"
+    engine: Literal["chat-history", "rag-anything"] = "chat-history"
 
     # Engine-specific configs
+    chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
 
 
