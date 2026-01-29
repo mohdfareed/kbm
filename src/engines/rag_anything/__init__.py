@@ -59,13 +59,13 @@ class RAGAnythingEngine:
             enable_equation_processing=self.config.enable_equation_processing,
         )
 
-        def llm_model_func(
+        async def llm_model_func(
             prompt: str,
             system_prompt: str | None = None,
             history_messages: list | None = None,
             **kwargs: Any,
         ) -> str:
-            return openai_complete_if_cache(
+            return await openai_complete_if_cache(
                 self.config.llm_model,
                 prompt,
                 system_prompt=system_prompt,
