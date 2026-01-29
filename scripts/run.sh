@@ -2,5 +2,11 @@
 set -e
 
 cd "$(dirname "$0")/.."
-uv sync --quiet
-exec uv run kbm "$@"
+
+if [[ "$1" == "--rebuild" ]]; then
+    shift
+    uv sync --quiet
+    exec uv run kbm "$@"
+else
+    exec ./.venv/bin/kbm "$@"
+fi

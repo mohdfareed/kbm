@@ -15,9 +15,12 @@
     "editor.tabSize": 2
   },
   "cSpell.words": [
+    "dotenv",
+    "lightrag",
     "pipx",
     "pydantic",
     "pytest",
+    "raganything",
     "streamable",
     "typer",
     "venv"
