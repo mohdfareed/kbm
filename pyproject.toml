@@ -9,6 +9,7 @@ dependencies = [
     "fastmcp>=3.0.0b1",
     "typer>=0.21",
     "pydantic-settings>=2.12",
+    "raganything>=1.2",
 ]
 
 [dependency-groups]
