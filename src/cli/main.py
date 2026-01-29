@@ -1,15 +1,17 @@
 """CLI entry point."""
 
 import typer
-from cli import APP_NAME
 
+from config import APP_NAME, DESCRIPTION
 
-app = typer.Typer()
+app = typer.Typer(name=APP_NAME, help=DESCRIPTION)
 
 
 @app.callback()
 def callback():
-    """Main entry point for the CLI application."""
+    """CLI application entry point."""
+    pass
+
 
 @app.command()
 def test():
