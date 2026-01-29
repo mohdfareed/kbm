@@ -1,28 +1,37 @@
 # KBM — Knowledge Base Manager
 
-KBM is a unified memory system that any LLM tool can read from and write to via the [Model Context Protocol](https://modelcontextprotocol.io/).
+Unified memory for LLMs via the [Model Context Protocol](https://modelcontextprotocol.io/).
 
-## Requirements
-
-- Python 3.12+
-- [`pipx`](https://pipxproject.github.io/pipx/) or any pip-compatible installer
-
-### Development
-
-- [`uv`](https://docs.astral.sh/uv/)
-
-## Installation
+## Install
 
 ```sh
-pipx install https://github.com/mohdfareed/kbm
-kbm --help
+pipx install git+https://github.com/mohdfareed/kbm
 ```
 
-### Development
+## Usage
+
+```sh
+kbm start           # start MCP server
+kbm memory --help   # knowledge base operations
+kbm config          # show configuration
+kbm version         # show version
+```
+
+## Configuration
+
+Settings are loaded from environment variables or a `.env` file (searched up from cwd).
+
+```sh
+kbm config > .env   # export current config
+```
+
+## Development
+
+Requires [`uv`](https://docs.astral.sh/uv/).
 
 ```sh
 git clone https://github.com/mohdfareed/kbm && cd kbm
-./scripts/setup.sh # set up development environment
+./scripts/setup.sh
 ./scripts/run.sh --help
 ```
 
