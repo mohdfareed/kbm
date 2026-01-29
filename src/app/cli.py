@@ -37,6 +37,8 @@ def callback() -> None:
 @cli.command()
 def start(transport: Transport = Transport.stdio) -> None:
     """Start the MCP server."""
+    from app.server import start
+
     start(transport=transport)
 
 
