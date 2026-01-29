@@ -1,1 +1,1 @@
-"""Core domain models and types."""
+"""Domain models and types."""

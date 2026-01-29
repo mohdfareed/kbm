@@ -57,14 +57,27 @@ Engine(s) — storage backend
 | Component     | Choice              | Rationale                              |
 | ------------- | ------------------- | -------------------------------------- |
 | Language      | Python 3.11+        | MCP SDK, ML ecosystem                  |
-| MCP Framework | `mcp` SDK           | Official Anthropic SDK                 |
+| MCP Framework | FastMCP 3           | Pythonic MCP framework, cleaner API    |
 | RAG/Retrieval | RAG-Anything        | Multimodal, built on LightRAG          |
 | Metadata DB   | SQLite              | Config, provenance, canonical copies   |
 | Config        | Pydantic Settings   | Type-safe, env + files + args          |
 | CLI           | Typer               | Modern, type-hint based                |
 | Distribution  | pipx                | CLI install with zero friction         |
 
+**Note:** FastMCP 3 is in beta; expect rapid iteration. Always consult the docs.
+
 **Dev tooling:** uv (packages), ruff (lint/format), pytest (tests)
+
+## Scripts
+
+Use the scripts under `scripts/` for common operations:
+
+| Script            | Purpose                                      |
+| ----------------- | -------------------------------------------- |
+| `scripts/run.sh`  | Run the CLI (`./scripts/run.sh <command>`)   |
+| `scripts/setup.sh`| Lock & sync dependencies                     |
+
+Always prefer these scripts over raw `uv` commands to ensure consistent behavior.
 
 ## MCP Tool Surface
 
