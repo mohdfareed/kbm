@@ -8,18 +8,7 @@ from typing import Annotated, Literal
 from fastmcp import FastMCP
 from pydantic import Field
 
-from engines.rag_anything import RAGAnythingEngine
-
-# Engine instance (initialized on first use)
-_engine: RAGAnythingEngine | None = None
-
-
-def _get_engine() -> RAGAnythingEngine:
-    """Get or create the engine instance."""
-    global _engine
-    if _engine is None:
-        _engine = RAGAnythingEngine()
-    return _engine
+from engines.rag_anything import get_engine
 
 
 def register(mcp: FastMCP) -> None:
@@ -41,34 +30,15 @@ def register(mcp: FastMCP) -> None:
                 )
             ),
         ] = "hybrid",
-        top_k: Annotated[
-            int,
-            Field(
-                description="Number of top entities/relationships to retrieve"
-            ),
-        ] = 60,
-        only_need_context: Annotated[
-            bool,
-            Field(
-                description="If true, return only retrieved context without LLM response"
-            ),
-        ] = False,
     ) -> str:
         """Query the knowledge base.
 
         Args:
             query: The query string.
-            params: Query parameters.
+            mode: Query mode.
         """
-        engine = _get_engine()
-        return asyncio.run(
-            engine.query(
-                query,
-                mode=mode,
-                top_k=top_k,
-                only_need_context=only_need_context,
-            )
-        )
+        engine = get_engine()
+        return asyncio.run(engine.query(query, mode=mode))
 
     @mcp.tool
     def insert(
@@ -79,25 +49,15 @@ def register(mcp: FastMCP) -> None:
                 description="Optional custom document ID (auto-generated if not provided)"
             ),
         ] = None,
-        split_by_character: Annotated[
-            str | None,
-            Field(description="Optional character to split text by"),
-        ] = None,
     ) -> str:
         """Insert text content into the knowledge base.
 
         Args:
             content: The text content to insert.
-            params: Insert parameters (doc_id, split_by_character).
+            doc_id: Optional document ID.
         """
-        engine = _get_engine()
-        return asyncio.run(
-            engine.insert(
-                content,
-                doc_id=doc_id,
-                split_by_character=split_by_character,
-            )
-        )
+        engine = get_engine()
+        return asyncio.run(engine.insert(content, doc_id=doc_id))
 
     @mcp.tool
     def insert_file(
@@ -108,63 +68,29 @@ def register(mcp: FastMCP) -> None:
                 description="Optional custom document ID (auto-generated if not provided)"
             ),
         ] = None,
-        parse_method: Annotated[
-            Literal["auto", "ocr", "txt"],
-            Field(description="Parsing method: 'auto', 'ocr', or 'txt'"),
-        ] = "auto",
-        enable_image_processing: Annotated[
-            bool, Field(description="Enable image extraction and analysis")
-        ] = True,
-        enable_table_processing: Annotated[
-            bool, Field(description="Enable table extraction and analysis")
-        ] = True,
-        enable_equation_processing: Annotated[
-            bool, Field(description="Enable equation/formula extraction")
-        ] = True,
     ) -> str:
         """Insert a file into the knowledge base.
 
         Args:
             file_path: Path to the file to insert.
-            params: Insert parameters (doc_id, parse_method, enable_*).
+            doc_id: Optional document ID.
         """
-        engine = _get_engine()
-        return asyncio.run(
-            engine.insert_file(
-                file_path,
-                doc_id=doc_id,
-                parse_method=parse_method,
-                enable_image_processing=enable_image_processing,
-                enable_table_processing=enable_table_processing,
-                enable_equation_processing=enable_equation_processing,
-            )
-        )
+        engine = get_engine()
+        return asyncio.run(engine.insert_file(file_path, doc_id=doc_id))
 
     @mcp.tool
-    def delete(
-        record_id: str,
-        soft_delete: Annotated[
-            bool,
-            Field(
-                description="If true, mark as deleted; if false, permanently remove"
-            ),
-        ] = True,
-    ) -> str:
+    def delete(record_id: str) -> str:
         """Delete a record from the knowledge base.
 
         Args:
             record_id: The ID of the record to delete.
-            params: Delete parameters (soft_delete).
         """
-        engine = _get_engine()
+        engine = get_engine()
         asyncio.run(engine.delete(record_id))
         return f"Deleted {record_id}"
 
     @mcp.tool
     def list_records(
-        include_deleted: Annotated[
-            bool, Field(description="Include soft-deleted records in the list")
-        ] = False,
         limit: Annotated[
             int, Field(description="Maximum number of records to return")
         ] = 100,
@@ -175,19 +101,14 @@ def register(mcp: FastMCP) -> None:
         """List records in the knowledge base.
 
         Args:
-            params: List parameters (include_deleted, limit, offset).
+            limit: Maximum records to return.
+            offset: Records to skip.
         """
-        engine = _get_engine()
-        return asyncio.run(
-            engine.list_records(
-                include_deleted=include_deleted,
-                limit=limit,
-                offset=offset,
-            )
-        )
+        engine = get_engine()
+        return asyncio.run(engine.list_records(limit=limit, offset=offset))
 
     @mcp.tool
     def info() -> dict:
         """Get information about the knowledge base."""
-        engine = _get_engine()
+        engine = get_engine()
         return asyncio.run(engine.info())
