@@ -1,6 +1,7 @@
 {
   "ruff.lineLength": 88,
   "cSpell.words": [
+    "asyncio",
     "customise",
     "dotenv",
     "editorconfig",
