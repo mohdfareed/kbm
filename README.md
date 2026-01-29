@@ -5,16 +5,16 @@ KBM is a unified memory system that any LLM tool can read from and write to via 
 ## Requirements
 
 - Python 3.12+
-- [`pipx`](https://pipxproject.github.io/pipx/).
+- [`pipx`](https://pipxproject.github.io/pipx/) or any pip-compatible installer
 
 ### Development
 
-- [`uv`](https://docs.astral.sh/uv/).
+- [`uv`](https://docs.astral.sh/uv/)
 
 ## Installation
 
 ```sh
-pipx install kbm
+pipx install https://github.com/mohdfareed/kbm
 kbm --help
 ```
 
