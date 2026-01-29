@@ -1,4 +1,5 @@
 {
+  "ruff.lineLength": 88,
   "cSpell.words": [
     "customise",
     "dotenv",
