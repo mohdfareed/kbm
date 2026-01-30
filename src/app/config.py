@@ -2,10 +2,12 @@
 
 __all__ = [
     "APP_NAME",
+    "CONFIG_FILES",
     "DESCRIPTION",
     "VERSION",
     "ChatHistoryConfig",
     "Engine",
+    "Format",
     "RAGAnythingConfig",
     "Settings",
     "get_settings",
@@ -22,6 +24,7 @@ from pydantic import BaseModel, model_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
+    EnvSettingsSource,
     JsonConfigSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
@@ -35,8 +38,14 @@ DESCRIPTION = metadata(APP_NAME)["Summary"]
 
 # Default data directory (platform-appropriate)
 DEFAULT_DATA_DIR = Path(typer.get_app_dir(APP_NAME))
+
+# Config file names by format
+CONFIG_FILE_YAML = "kbm.yaml"
+CONFIG_FILE_JSON = "kbm.json"
+CONFIG_FILE_ENV = ".env"
+
 # Config file names in priority order
-CONFIG_FILES = (".env", "kbm.yaml", "kbm.yml", "kbm.json")
+CONFIG_FILES = (CONFIG_FILE_ENV, CONFIG_FILE_YAML, "kbm.yml", CONFIG_FILE_JSON)
 
 
 class Engine(str, Enum):
@@ -44,6 +53,23 @@ class Engine(str, Enum):
 
     chat_history = "chat-history"
     rag_anything = "rag-anything"
+
+
+class Format(str, Enum):
+    """Config file output formats."""
+
+    yaml = "yaml"
+    json = "json"
+    env = "env"
+
+    @property
+    def filename(self) -> str:
+        """Default config filename for this format."""
+        return {
+            Format.yaml: CONFIG_FILE_YAML,
+            Format.json: CONFIG_FILE_JSON,
+            Format.env: CONFIG_FILE_ENV,
+        }[self]
 
 
 # MARK: Engine settings
@@ -110,20 +136,31 @@ class Settings(BaseSettings):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         return self
 
+    # MARK: - Loading from files
+
     @classmethod
     def from_yaml(cls, path: Path) -> Self:
         """Load settings from a YAML file."""
-        return cls(**YamlConfigSettingsSource(cls, path)(), config_file=path)
+        file_settings = YamlConfigSettingsSource(cls, path)()
+        return cls(**cls._merge_with_env(file_settings), config_file=path)
 
     @classmethod
     def from_json(cls, path: Path) -> Self:
         """Load settings from a JSON file."""
-        return cls(**JsonConfigSettingsSource(cls, path)(), config_file=path)
+        file_settings = JsonConfigSettingsSource(cls, path)()
+        return cls(**cls._merge_with_env(file_settings), config_file=path)
 
     @classmethod
     def from_env(cls, path: Path) -> Self:
         """Load settings from a .env file."""
-        return cls(**DotEnvSettingsSource(cls, path)(), config_file=path)
+        file_settings = DotEnvSettingsSource(cls, path)()
+        return cls(**cls._merge_with_env(file_settings), config_file=path)
+
+    @classmethod
+    def _merge_with_env(cls, file_settings: dict) -> dict:
+        """Merge file settings with env vars (env vars take precedence)."""
+        env_settings = EnvSettingsSource(cls, case_sensitive=False)()
+        return {k: v for k, v in file_settings.items() if k not in env_settings}
 
 
 # MARK: Settings management

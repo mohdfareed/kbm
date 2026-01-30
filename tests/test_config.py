@@ -4,13 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.config import (
-    CONFIG_FILES,
-    Engine,
-    Settings,
-    get_settings,
-    init_settings,
-)
+from app.config import CONFIG_FILES, Engine, Settings, get_settings, init_settings
 
 
 class TestSettings:
