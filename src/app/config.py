@@ -37,23 +37,27 @@ APP_NAME = "kbm"
 VERSION = version(APP_NAME)
 DESCRIPTION = metadata(APP_NAME)["Summary"]
 
-# Config file names by format
-CONFIG_FILE_ENV = f".{APP_NAME}.env"
-CONFIG_FILE_JSON = f".{APP_NAME}.json"
-CONFIG_FILE_YAML = f".{APP_NAME}.yaml"
+# Config file names in priority order (without extensions)
+DEFAULT_CONFIG_FILE = f".{APP_NAME}"
+DEFAULT_CONFIG_FILE_ENV = f".{APP_NAME}.env"
+DEFAULT_CONFIG_FILE_JSON = f".{APP_NAME}.json"
+DEFAULT_CONFIG_FILE_YAML = f".{APP_NAME}.yaml"
 
-# Config file names in priority order
-CONFIG_FILES = (
-    ".env",
-    f".{APP_NAME}",
-    CONFIG_FILE_ENV,
-    CONFIG_FILE_JSON,
-    CONFIG_FILE_YAML,
-    f"{APP_NAME}.env",
-    f"{APP_NAME}.json",
-    f"{APP_NAME}.yaml",
-    f"{APP_NAME}.yml",
-)
+CONFIG_FILES = [
+    f".env",
+    # File-based
+    f"{DEFAULT_CONFIG_FILE}",
+    f"{DEFAULT_CONFIG_FILE_ENV}",
+    f"{DEFAULT_CONFIG_FILE_JSON}",
+    f"{DEFAULT_CONFIG_FILE_YAML}",
+    f"{DEFAULT_CONFIG_FILE}.yml",
+    # Directory-based
+    Path(DEFAULT_CONFIG_FILE) / "config",
+    Path(DEFAULT_CONFIG_FILE) / "config.env",
+    Path(DEFAULT_CONFIG_FILE) / "config.json",
+    Path(DEFAULT_CONFIG_FILE) / "config.yaml",
+    Path(DEFAULT_CONFIG_FILE) / "config.yml",
+]
 
 
 class Engines(str, Enum):
@@ -74,9 +78,9 @@ class ConfigFormat(str, Enum):
     def filename(self) -> str:
         """Default config filename for this format."""
         return {
-            ConfigFormat.yaml: CONFIG_FILE_YAML,
-            ConfigFormat.json: CONFIG_FILE_JSON,
-            ConfigFormat.env: CONFIG_FILE_ENV,
+            ConfigFormat.yaml: DEFAULT_CONFIG_FILE_YAML,
+            ConfigFormat.json: DEFAULT_CONFIG_FILE_JSON,
+            ConfigFormat.env: DEFAULT_CONFIG_FILE_ENV,
         }[self]
 
 
@@ -221,8 +225,6 @@ def init_settings(config_path: Path | None = None) -> Settings:
             _settings = Settings.from_yaml(config_file)
         elif config_file.suffix == ".json":
             _settings = Settings.from_json(config_file)
-        elif config_file.suffix.endswith(".env"):
-            _settings = Settings.from_env(config_file)
         else:
             _settings = Settings.from_env(config_file)
     else:

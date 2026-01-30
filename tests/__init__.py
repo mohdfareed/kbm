@@ -1,1 +1,1 @@
-"""KBM test suite."""
+"""Knowledge base test suite."""

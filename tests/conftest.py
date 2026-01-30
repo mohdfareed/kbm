@@ -6,6 +6,8 @@ from typing import Generator
 
 import pytest
 
+from app.config import APP_NAME
+
 
 @pytest.fixture
 def tmp_data_dir(tmp_path: Path) -> Generator[Path, None, None]:
@@ -37,9 +39,11 @@ def reset_chat_engine() -> Generator[None, None, None]:
 
 @pytest.fixture
 def clean_env() -> Generator[None, None, None]:
-    """Remove KBM env vars for clean config tests."""
-    kbm_vars = {k: v for k, v in os.environ.items() if k.startswith("KBM_")}
-    for k in kbm_vars:
+    """Remove env vars for clean config tests."""
+    env_vars = {
+        k: v for k, v in os.environ.items() if k.startswith(f"{APP_NAME.upper()}_")
+    }
+    for k in env_vars:
         del os.environ[k]
     yield
-    os.environ.update(kbm_vars)
+    os.environ.update(env_vars)

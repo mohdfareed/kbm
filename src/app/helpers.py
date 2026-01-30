@@ -81,7 +81,7 @@ def find_file(names: Iterable[str]) -> Path | None:
     return None
 
 
-def settings_to_env(data: dict, prefix: str = "KBM") -> list[str]:
+def settings_to_env(data: dict, prefix: str) -> list[str]:
     """Convert settings dict to environment variable lines."""
     lines: list[str] = []
     for key, value in data.items():

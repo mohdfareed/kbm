@@ -125,7 +125,7 @@ def config(
     elif fmt == ConfigFormat.json:
         print_json(json.dumps(data, indent=2))
     elif fmt == ConfigFormat.env:
-        lines = settings_to_env(data)
+        lines = settings_to_env(data, APP_NAME)
         print("\n".join(lines))
 
 
@@ -146,7 +146,7 @@ def init(
     # Get default settings and prep for writing
     defaults = Settings().model_dump(mode="json", exclude={"config_file"})
     output.parent.mkdir(parents=True, exist_ok=True)
-    env_lines = settings_to_env(defaults)
+    env_lines = settings_to_env(defaults, APP_NAME)
 
     # Write config file
     if fmt == ConfigFormat.yaml:

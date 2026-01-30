@@ -4,7 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from app.config import CONFIG_FILES, Engines, Settings, get_settings, init_settings
+from app.config import (
+    APP_NAME,
+    CONFIG_FILES,
+    Engines,
+    Settings,
+    get_settings,
+    init_settings,
+)
 
 
 class TestSettings:
@@ -102,12 +109,12 @@ class TestConfigFiles:
         """Config files have correct priority order."""
         assert CONFIG_FILES == (
             ".env",
-            ".kbm",
-            ".kbm.env",
-            ".kbm.json",
-            ".kbm.yaml",
-            "kbm.env",
-            "kbm.json",
-            "kbm.yaml",
-            "kbm.yml",
+            f".{APP_NAME}",
+            f".{APP_NAME}.env",
+            f".{APP_NAME}.json",
+            f".{APP_NAME}.yaml",
+            f"{APP_NAME}.env",
+            f"{APP_NAME}.json",
+            f"{APP_NAME}.yaml",
+            f"{APP_NAME}.yml",
         )

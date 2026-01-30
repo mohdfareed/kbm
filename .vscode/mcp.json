@@ -1,11 +1,11 @@
 {
   "servers": {
-    "kbm": {
+    "memories": {
       "type": "stdio",
       "command": "./scripts/run.sh",
       "args": [
         "--config",
-        ".vscode/.kbm.yaml",
+        ".kbm.yaml",
         "start",
       ]
     },
@@ -14,7 +14,7 @@
       "command": "./scripts/run.sh",
       "args": [
         "--config",
-        ".vscode/.env",
+        ".env",
         "start",
       ]
     }

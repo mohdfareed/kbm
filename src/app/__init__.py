@@ -1,4 +1,4 @@
-"""KBM application."""
+"""Knowledge base application."""
 
 __all__ = ["cli", "get_settings"]
 
