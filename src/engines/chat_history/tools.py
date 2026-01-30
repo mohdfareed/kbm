@@ -21,12 +21,7 @@ def register(mcp: FastMCP) -> None:
             int, Field(description="Maximum number of results to return")
         ] = 10,
     ) -> str:
-        """Query the knowledge base.
-
-        Args:
-            query: The query string.
-            params: Query parameters.
-        """
+        """Search the knowledge base for relevant information."""
         engine = get_engine()
         return asyncio.run(engine.query(query, top_k=top_k))
 
@@ -42,12 +37,7 @@ def register(mcp: FastMCP) -> None:
             ),
         ] = None,
     ) -> str:
-        """Insert text content into the knowledge base.
-
-        Args:
-            content: The text content to insert.
-            params: Insert parameters (doc_id).
-        """
+        """Insert text content into the knowledge base."""
         engine = get_engine()
         return asyncio.run(engine.insert(content, doc_id=doc_id))
 
@@ -63,22 +53,13 @@ def register(mcp: FastMCP) -> None:
             ),
         ] = None,
     ) -> str:
-        """Insert a file into the knowledge base.
-
-        Args:
-            file_path: Path to the file to insert.
-            params: Insert parameters (doc_id).
-        """
+        """Insert a file into the knowledge base (PDF, image, etc.)."""
         engine = get_engine()
         return asyncio.run(engine.insert_file(file_path, doc_id=doc_id))
 
     @mcp.tool
     def delete(record_id: str) -> str:
-        """Delete a record from the knowledge base.
-
-        Args:
-            record_id: The ID of the record to delete.
-        """
+        """Delete a record from the knowledge base by its ID."""
         engine = get_engine()
         asyncio.run(engine.delete(record_id))
         return f"Deleted {record_id}"
@@ -90,11 +71,7 @@ def register(mcp: FastMCP) -> None:
         ] = 100,
         offset: Annotated[int, Field(description="Number of records to skip")] = 0,
     ) -> list[dict]:
-        """List records in the knowledge base.
-
-        Args:
-            params: List parameters (limit, offset).
-        """
+        """List records in the knowledge base."""
         engine = get_engine()
         return asyncio.run(engine.list_records(limit=limit, offset=offset))
 

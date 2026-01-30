@@ -100,4 +100,14 @@ class TestConfigFiles:
 
     def test_config_files_priority(self) -> None:
         """Config files have correct priority order."""
-        assert CONFIG_FILES == (".env", "kbm.yaml", "kbm.yml", "kbm.json")
+        assert CONFIG_FILES == (
+            ".env",
+            ".kbm",
+            ".kbm.env",
+            ".kbm.json",
+            ".kbm.yaml",
+            "kbm.env",
+            "kbm.json",
+            "kbm.yaml",
+            "kbm.yml",
+        )
