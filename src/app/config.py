@@ -41,12 +41,22 @@ DESCRIPTION = metadata(APP_NAME)["Summary"]
 DEFAULT_DATA_DIR = Path(typer.get_app_dir(APP_NAME))
 
 # Config file names by format
-CONFIG_FILE_YAML = "kbm.yaml"
-CONFIG_FILE_JSON = "kbm.json"
-CONFIG_FILE_ENV = ".env"
+CONFIG_FILE_ENV = f".{APP_NAME}.env"
+CONFIG_FILE_JSON = f".{APP_NAME}.json"
+CONFIG_FILE_YAML = f".{APP_NAME}.yaml"
 
 # Config file names in priority order
-CONFIG_FILES = (CONFIG_FILE_ENV, CONFIG_FILE_YAML, "kbm.yml", CONFIG_FILE_JSON)
+CONFIG_FILES = (
+    ".env",
+    f".{APP_NAME}",
+    CONFIG_FILE_ENV,
+    CONFIG_FILE_JSON,
+    CONFIG_FILE_YAML,
+    f"{APP_NAME}.env",
+    f"{APP_NAME}.json",
+    f"{APP_NAME}.yaml",
+    f"{APP_NAME}.yml",
+)
 
 
 class Engine(str, Enum):

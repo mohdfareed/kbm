@@ -13,6 +13,7 @@ pipx install git+https://github.com/mohdfareed/kbm
 ## Quick Start
 
 ```sh
+kbm init               # create default config file
 kbm start              # start MCP server (stdio)
 kbm memory query "x"   # search the knowledge base
 kbm memory insert "y"  # add content
@@ -34,7 +35,6 @@ kbm memory insert "y"  # add content
 Settings load from a config file (`.env`, `kbm.yaml`, or `kbm.json`) with env var overrides.
 
 ```sh
-kbm init                       # create kbm.yaml with defaults
 kbm init --format env          # create .env instead
 kbm config                     # show current config
 ```

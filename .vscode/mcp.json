@@ -1,12 +1,23 @@
 {
-	"servers": {
-		"kbm-dev": {
-			"type": "stdio",
-			"command": "./scripts/run.sh",
-			"args": [
-				"start"
-			]
-		}
-	},
-	"inputs": []
+  "servers": {
+    "kbm": {
+      "type": "stdio",
+      "command": "./scripts/run.sh",
+      "args": [
+        "--config",
+        ".vscode/.kbm.yaml",
+        "start",
+      ]
+    },
+    "kbm-dev": {
+      "type": "stdio",
+      "command": "./scripts/run.sh",
+      "args": [
+        "--config",
+        ".vscode/.env",
+        "start",
+      ]
+    }
+  },
+  "inputs": []
 }
