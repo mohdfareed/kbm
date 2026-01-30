@@ -3,15 +3,30 @@
 __all__ = ["app"]
 
 import asyncio
+import logging
 from typing import Annotated, Literal
 
 import typer
 
+from app.helpers import console, status_spinner
 from engines.rag_anything import get_engine
 
 app = typer.Typer(
     name="memory", help="Knowledge base memory operations (RAG-Anything)."
 )
+
+
+@app.callback()
+def main() -> None:
+    """Knowledge base memory operations."""
+
+    # Ensure library loggers propagate to root
+    for name in ("lightrag", "raganything"):
+        logging.getLogger(name).handlers = []
+        logging.getLogger(name).propagate = True
+
+
+# MARK: CLI commands
 
 
 @app.command()
@@ -33,8 +48,9 @@ def query(
 ) -> None:
     """Query the knowledge base."""
     engine = get_engine()
-    result = asyncio.run(engine.query(query, mode=mode))
-    typer.echo(result)
+    with status_spinner("Querying..."):
+        result = asyncio.run(engine.query(query, mode=mode))
+    console.print(result)
 
 
 @app.command()
@@ -44,8 +60,9 @@ def insert(
 ) -> None:
     """Insert text content into the knowledge base."""
     engine = get_engine()
-    result = asyncio.run(engine.insert(content, doc_id=doc_id))
-    typer.echo(f"Created record: {result}")
+    with status_spinner("Inserting..."):
+        result = asyncio.run(engine.insert(content, doc_id=doc_id))
+    console.print(f"Created record: {result}")
 
 
 @app.command()
@@ -55,8 +72,9 @@ def insert_file(
 ) -> None:
     """Insert a file into the knowledge base."""
     engine = get_engine()
-    result = asyncio.run(engine.insert_file(file_path, doc_id=doc_id))
-    typer.echo(f"Created record: {result}")
+    with status_spinner("Processing file..."):
+        result = asyncio.run(engine.insert_file(file_path, doc_id=doc_id))
+    console.print(f"Created record: {result}")
 
 
 @app.command()
@@ -65,8 +83,9 @@ def delete(
 ) -> None:
     """Delete a record from the knowledge base."""
     engine = get_engine()
-    asyncio.run(engine.delete(record_id))
-    typer.echo(f"Deleted: {record_id}")
+    with status_spinner("Deleting..."):
+        asyncio.run(engine.delete(record_id))
+    console.print(f"Deleted: {record_id}")
 
 
 @app.command("list")
@@ -76,21 +95,23 @@ def list_records(
 ) -> None:
     """List records in the knowledge base."""
     engine = get_engine()
-    result = asyncio.run(engine.list_records(limit=limit, offset=offset))
+    with status_spinner("Listing..."):
+        result = asyncio.run(engine.list_records(limit=limit, offset=offset))
 
     if not result:
-        typer.echo("No records found.")
+        console.print("No records found.")
         return
 
     for record in result:
-        typer.echo(record)
+        console.print(record)
 
 
 @app.command()
 def info() -> None:
     """Get information about the knowledge base."""
     engine = get_engine()
-    result = asyncio.run(engine.info())
+    with status_spinner("Loading..."):
+        result = asyncio.run(engine.info())
 
     for key, value in result.items():
-        typer.echo(f"{key}: {value}")
+        console.print(f"{key}: {value}")

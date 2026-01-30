@@ -4,6 +4,7 @@ __all__ = ["cli"]
 
 import json
 from pathlib import Path
+from typing import Annotated
 
 import typer
 import yaml
@@ -19,7 +20,7 @@ from app.config import (
     get_settings,
     init_settings,
 )
-from app.helpers import LazyGroup
+from app.helpers import LazyGroup, configure_logging, settings_to_env
 from app.server import Transport, init_server, start_server
 
 # MARK: CLI setup
@@ -39,7 +40,7 @@ LazyGroup.lazy_subcommands["memory"] = {
 }
 
 
-# MARK: CLI commands
+# MARK: CLI initialization
 
 
 def _config_callback(config: Path | None) -> Path | None:
@@ -50,6 +51,10 @@ def _config_callback(config: Path | None) -> Path | None:
 
 @cli.callback()
 def callback(
+    debug: Annotated[
+        bool,
+        typer.Option("--debug", "-d", help="Enable debug output logging"),
+    ] = False,
     config: Path | None = typer.Option(
         None,
         "-c",
@@ -60,14 +65,17 @@ def callback(
     ),
 ) -> None:
     """CLI application entry point."""
-    pass  # Config already loaded by eager callback
+    configure_logging(debug=debug)
+
+
+# MARK: CLI commands
 
 
 @cli.command()
 def start() -> None:
     """Start the MCP server."""
     settings = get_settings()
-    typer.echo(f"Starting {settings.server_name} server (engine={settings.engine})...")
+    print(f"Starting {settings.server_name} server (engine={settings.engine})...")
 
     mcp = init_server()
     start_server(mcp, Transport.stdio)
@@ -76,7 +84,7 @@ def start() -> None:
 @cli.command()
 def version() -> None:
     """Show the version number."""
-    typer.echo(f"{APP_NAME} {VERSION}")
+    print(f"{APP_NAME} {VERSION}")
 
 
 @cli.command()
@@ -92,7 +100,7 @@ def config(
     elif fmt == Format.json:
         print_json(json.dumps(data, indent=2))
     elif fmt == Format.env:
-        lines = _settings_to_env(data)
+        lines = settings_to_env(data)
         print("\n".join(lines))
 
 
@@ -105,13 +113,13 @@ def init(
     """Create a config file with default settings."""
     output = path or Path(fmt.filename)
     if output.exists() and not force:
-        typer.echo("File already exists. Use --force to overwrite.")
+        print("error: File already exists. Use --force to overwrite.")
         raise typer.Exit(1)
 
     # Get default settings and prep for writing
-    defaults = Settings().model_dump(mode="json", exclude_computed_fields=True)
+    defaults = Settings().model_dump(mode="json", exclude={"config_file"})
     output.parent.mkdir(parents=True, exist_ok=True)
-    env_lines = _settings_to_env(defaults)
+    env_lines = settings_to_env(defaults)
 
     # Write config file
     if fmt == Format.yaml:
@@ -121,17 +129,4 @@ def init(
     elif fmt == Format.env:
         output.write_text("\n".join(env_lines) + "\n")
 
-    typer.echo(f"Created config file: {output}")
-
-
-def _settings_to_env(data: dict, prefix: str = "KBM") -> list[str]:
-    """Convert settings dict to environment variable lines."""
-    lines: list[str] = []
-    for key, value in data.items():
-        env_key = f"{prefix}_{key}".upper()
-        if isinstance(value, dict):
-            lines.extend(_settings_to_env(value, env_key))
-        elif value is not None:
-            lines.append(f"{env_key}={value}")
-    return lines
-    return lines
+    print(f"Created config file: {output}")

@@ -2,20 +2,59 @@
 
 __all__ = [
     "LazyGroup",
+    "configure_logging",
+    "console",
     "find_file",
+    "settings_to_env",
+    "status_spinner",
 ]
 
 import importlib
+import logging
 from collections.abc import Iterable
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import click
 import typer
+from rich.console import Console
+from rich.logging import RichHandler
 from typer.core import TyperGroup  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
     from app.config import Engine
+
+
+# MARK: CLI utilities
+
+console = Console()
+_debug_mode = False
+
+
+def configure_logging(debug: bool) -> None:
+    """Configure logging for CLI commands."""
+    global _debug_mode
+    _debug_mode = debug
+
+    if not debug:
+        logging.disable(logging.CRITICAL)
+        return
+
+    # Configure root logger to capture all library logs
+    logging.root.setLevel(logging.DEBUG)
+    logging.root.addHandler(RichHandler(console=console))
+
+
+@contextmanager
+def status_spinner(message: str):
+    """Show spinner unless in debug mode."""
+    if _debug_mode:
+        yield
+        return
+
+    with console.status(message):
+        yield
 
 
 # MARK: File utilities
@@ -40,6 +79,18 @@ def find_file(names: Iterable[str]) -> Path | None:
         current = parent
 
     return None
+
+
+def settings_to_env(data: dict, prefix: str = "KBM") -> list[str]:
+    """Convert settings dict to environment variable lines."""
+    lines: list[str] = []
+    for key, value in data.items():
+        env_key = f"{prefix}_{key}".upper()
+        if isinstance(value, dict):
+            lines.extend(settings_to_env(value, env_key))
+        elif value is not None:
+            lines.append(f"{env_key}={value}")
+    return lines
 
 
 # MARK: Lazy loading CLI group

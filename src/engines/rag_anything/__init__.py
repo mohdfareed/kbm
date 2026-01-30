@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from lightrag import LightRAG
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
 from raganything import RAGAnything, RAGAnythingConfig
@@ -43,56 +44,9 @@ class RAGAnythingEngine:
                 "rag_anything.api_key in config."
             )
 
-        # Lazy-init the RAGAnything instance
+        # Lazy-init instances
+        self._lightrag: LightRAG | None = None
         self._rag: RAGAnything | None = None
-
-    def _get_rag(self) -> RAGAnything:
-        """Get or create the RAGAnything instance."""
-        if self._rag is not None:
-            return self._rag
-
-        config = RAGAnythingConfig(
-            working_dir=str(self.working_dir),
-            enable_image_processing=self.config.enable_image_processing,
-            enable_table_processing=self.config.enable_table_processing,
-            enable_equation_processing=self.config.enable_equation_processing,
-        )
-
-        async def llm_model_func(
-            prompt: str,
-            system_prompt: str | None = None,
-            history_messages: list | None = None,
-            **kwargs: Any,
-        ) -> str:
-            return await openai_complete_if_cache(
-                self.config.llm_model,
-                prompt,
-                system_prompt=system_prompt,
-                history_messages=history_messages or [],
-                api_key=self._api_key,
-                base_url=self._base_url,
-                **kwargs,
-            )
-
-        embedding_func = EmbeddingFunc(
-            embedding_dim=self.config.embedding_dim,
-            max_token_size=8192,
-            func=lambda texts: openai_embed(
-                texts,
-                model=self.config.embedding_model,
-                api_key=self._api_key,
-                base_url=self._base_url,
-            ),
-        )
-
-        self._rag = RAGAnything(
-            config=config,
-            llm_model_func=llm_model_func,
-            embedding_func=embedding_func,
-        )
-        return self._rag
-
-    # MARK: - Public methods
 
     async def query(self, query: str, **kwargs: Any) -> str:
         """Query the knowledge base.
@@ -101,7 +55,8 @@ class RAGAnythingEngine:
             mode: Query mode (local/global/hybrid/naive/mix)
         """
         mode = kwargs.get("mode", "hybrid")
-        rag = self._get_rag()
+        lightrag = await self._get_lightrag()
+        rag = self._get_rag(lightrag)
         return await rag.aquery(query, mode=mode)
 
     async def insert(self, content: str, **kwargs: Any) -> str:
@@ -111,7 +66,8 @@ class RAGAnythingEngine:
             doc_id: Custom document ID
         """
         doc_id = kwargs.get("doc_id")
-        rag = self._get_rag()
+        lightrag = await self._get_lightrag()
+        rag = self._get_rag(lightrag)
 
         # Create a content list for insertion
         content_list = [{"type": "text", "text": content, "page_idx": 0}]
@@ -133,7 +89,8 @@ class RAGAnythingEngine:
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        rag = self._get_rag()
+        lightrag = await self._get_lightrag()
+        rag = self._get_rag(lightrag)
 
         # Use process_document_complete for full document processing
         await rag.process_document_complete(
@@ -173,3 +130,68 @@ class RAGAnythingEngine:
             "enable_table_processing": self.config.enable_table_processing,
             "enable_equation_processing": self.config.enable_equation_processing,
         }
+
+    # MARK: - Private methods
+
+    def _get_embedding_func(self) -> EmbeddingFunc:
+        """Create the embedding function."""
+        # Use openai_embed.func to avoid double-wrapping
+        # (openai_embed is already an EmbeddingFunc)
+        return EmbeddingFunc(
+            embedding_dim=self.config.embedding_dim,
+            max_token_size=8192,
+            func=lambda texts: openai_embed.func(
+                texts,
+                model=self.config.embedding_model,
+                api_key=self._api_key,
+                base_url=self._base_url,
+            ),
+        )
+
+    async def _get_lightrag(self) -> LightRAG:
+        """Get or create the LightRAG instance (handles data loading)."""
+        if self._lightrag is not None:
+            return self._lightrag
+
+        async def llm_model_func(
+            prompt: str,
+            system_prompt: str | None = None,
+            history_messages: list | None = None,
+            **kwargs: Any,
+        ) -> str:
+            return await openai_complete_if_cache(
+                self.config.llm_model,
+                prompt,
+                system_prompt=system_prompt,
+                history_messages=history_messages or [],
+                api_key=self._api_key,
+                base_url=self._base_url,
+                **kwargs,
+            )
+
+        self._lightrag = LightRAG(
+            working_dir=str(self.working_dir),
+            llm_model_func=llm_model_func,
+            embedding_func=self._get_embedding_func(),
+        )
+        # Initialize storages (loads existing data from disk)
+        await self._lightrag.initialize_storages()
+        return self._lightrag
+
+    def _get_rag(self, lightrag: LightRAG) -> RAGAnything:
+        """Get or create the RAGAnything instance."""
+        if self._rag is not None:
+            return self._rag
+
+        config = RAGAnythingConfig(
+            working_dir=str(self.working_dir),
+            enable_image_processing=self.config.enable_image_processing,
+            enable_table_processing=self.config.enable_table_processing,
+            enable_equation_processing=self.config.enable_equation_processing,
+        )
+
+        self._rag = RAGAnything(
+            lightrag=lightrag,
+            config=config,
+        )
+        return self._rag
