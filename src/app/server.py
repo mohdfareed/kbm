@@ -20,7 +20,10 @@ class Transport(str, Enum):
 def init_server() -> FastMCP:
     """Initialize and configure MCP server."""
     settings = get_settings()
-    mcp = FastMCP(settings.server_name)
+    mcp = FastMCP(
+        settings.server_name,
+        instructions=settings.prompts.server_instructions,
+    )
 
     # Register engine-specific tools
     if settings.engine == Engine.chat_history:

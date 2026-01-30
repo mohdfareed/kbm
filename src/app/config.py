@@ -8,6 +8,7 @@ __all__ = [
     "ChatHistoryConfig",
     "Engine",
     "Format",
+    "PromptsConfig",
     "RAGAnythingConfig",
     "Settings",
     "get_settings",
@@ -101,6 +102,24 @@ class RAGAnythingConfig(BaseModel):
     enable_equation_processing: bool = True
 
 
+# MARK: Prompts settings
+
+# Default server instruction - conveys the continuity concept
+DEFAULT_SERVER_INSTRUCTIONS = """\
+You have access to the user's knowledge base — a persistent memory that spans \
+conversations, tools, and time. Query it to recall context from previous \
+sessions, and insert information worth preserving for future conversations. \
+Treat it as shared memory: any model the user talks to can access it, so \
+store things in a way that would be useful to a fresh model with no prior context.
+""".strip()
+
+
+class PromptsConfig(BaseModel):
+    """MCP server prompts configuration."""
+
+    server_instructions: str = DEFAULT_SERVER_INSTRUCTIONS
+
+
 # MARK: App settings
 
 
@@ -122,6 +141,9 @@ class Settings(BaseSettings):
     # Engine-specific configs
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
+
+    # Prompts configuration
+    prompts: PromptsConfig = PromptsConfig()
 
     # MARK: - Settings methods
 
@@ -160,7 +182,7 @@ class Settings(BaseSettings):
     def _merge_with_env(cls, file_settings: dict) -> dict:
         """Merge file settings with env vars (env vars take precedence)."""
         env_settings = EnvSettingsSource(cls, case_sensitive=False)()
-        return {k: v for k, v in file_settings.items() if k not in env_settings}
+        return {**file_settings, **env_settings}
 
 
 # MARK: Settings management
