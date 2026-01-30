@@ -14,8 +14,8 @@ from app.config import (
     APP_NAME,
     DESCRIPTION,
     VERSION,
-    Engine,
-    Format,
+    ConfigFormat,
+    Engines,
     Settings,
     get_settings,
     init_settings,
@@ -35,8 +35,8 @@ cli = typer.Typer(
 
 # Register lazy subcommands (loaded based on engine in settings)
 LazyGroup.lazy_subcommands["memory"] = {
-    Engine.chat_history: "engines.chat_history.commands.app",
-    Engine.rag_anything: "engines.rag_anything.commands.app",
+    Engines.chat_history: "engines.chat_history.commands.app",
+    Engines.rag_anything: "engines.rag_anything.commands.app",
 }
 
 
@@ -112,17 +112,19 @@ def version() -> None:
 
 @cli.command()
 def config(
-    fmt: Format = typer.Option(Format.json, "-f", "--format", help="Output format."),
+    fmt: ConfigFormat = typer.Option(
+        ConfigFormat.json, "-f", "--format", help="Output format."
+    ),
 ) -> None:
     """Show current configuration."""
     settings = get_settings()
     data = settings.model_dump(mode="json")
 
-    if fmt == Format.yaml:
+    if fmt == ConfigFormat.yaml:
         print(yaml.safe_dump(data, sort_keys=False).rstrip())
-    elif fmt == Format.json:
+    elif fmt == ConfigFormat.json:
         print_json(json.dumps(data, indent=2))
-    elif fmt == Format.env:
+    elif fmt == ConfigFormat.env:
         lines = settings_to_env(data)
         print("\n".join(lines))
 
@@ -130,7 +132,9 @@ def config(
 @cli.command()
 def init(
     path: Path | None = typer.Option(None, "-p", "--path", help="Output file path."),
-    fmt: Format = typer.Option(Format.yaml, "-f", "--format", help="Output format."),
+    fmt: ConfigFormat = typer.Option(
+        ConfigFormat.yaml, "-f", "--format", help="Output format."
+    ),
     force: bool = typer.Option(False, "-F", "--force", help="Overwrite existing file."),
 ) -> None:
     """Create a config file with default settings."""
@@ -145,11 +149,11 @@ def init(
     env_lines = settings_to_env(defaults)
 
     # Write config file
-    if fmt == Format.yaml:
+    if fmt == ConfigFormat.yaml:
         output.write_text(yaml.safe_dump(defaults, sort_keys=False))
-    elif fmt == Format.json:
+    elif fmt == ConfigFormat.json:
         output.write_text(json.dumps(defaults, indent=2) + "\n")
-    elif fmt == Format.env:
+    elif fmt == ConfigFormat.env:
         output.write_text("\n".join(env_lines) + "\n")
 
     print(f"Created config file: {output}")

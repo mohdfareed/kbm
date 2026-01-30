@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.config import CONFIG_FILES, Engine, Settings, get_settings, init_settings
+from app.config import CONFIG_FILES, Engines, Settings, get_settings, init_settings
 
 
 class TestSettings:
@@ -13,7 +13,7 @@ class TestSettings:
     def test_default_settings(self, tmp_data_dir: Path, clean_env: None) -> None:
         """Default settings should be valid."""
         settings = Settings(data_dir=tmp_data_dir)
-        assert settings.engine == Engine.chat_history
+        assert settings.engine == Engines.chat_history
         assert settings.data_dir == tmp_data_dir
 
     def test_resolve_relative_path(self, tmp_data_dir: Path, clean_env: None) -> None:
@@ -43,7 +43,7 @@ class TestSettings:
             f"engine: rag-anything\ndata_dir: {tmp_path}\nserver_name: test-server\n"
         )
         settings = Settings.from_yaml(config_file)
-        assert settings.engine == Engine.rag_anything
+        assert settings.engine == Engines.rag_anything
         assert settings.server_name == "test-server"
 
     def test_engine_specific_config(self, tmp_data_dir: Path, clean_env: None) -> None:

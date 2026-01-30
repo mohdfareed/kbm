@@ -6,8 +6,8 @@ __all__ = [
     "DESCRIPTION",
     "VERSION",
     "ChatHistoryConfig",
-    "Engine",
-    "Format",
+    "ConfigFormat",
+    "Engines",
     "PromptsConfig",
     "RAGAnythingConfig",
     "Settings",
@@ -37,9 +37,6 @@ APP_NAME = "kbm"
 VERSION = version(APP_NAME)
 DESCRIPTION = metadata(APP_NAME)["Summary"]
 
-# Default data directory (platform-appropriate)
-DEFAULT_DATA_DIR = Path(typer.get_app_dir(APP_NAME))
-
 # Config file names by format
 CONFIG_FILE_ENV = f".{APP_NAME}.env"
 CONFIG_FILE_JSON = f".{APP_NAME}.json"
@@ -59,14 +56,14 @@ CONFIG_FILES = (
 )
 
 
-class Engine(str, Enum):
+class Engines(str, Enum):
     """Available storage engines."""
 
     chat_history = "chat-history"
     rag_anything = "rag-anything"
 
 
-class Format(str, Enum):
+class ConfigFormat(str, Enum):
     """Config file output formats."""
 
     yaml = "yaml"
@@ -77,9 +74,9 @@ class Format(str, Enum):
     def filename(self) -> str:
         """Default config filename for this format."""
         return {
-            Format.yaml: CONFIG_FILE_YAML,
-            Format.json: CONFIG_FILE_JSON,
-            Format.env: CONFIG_FILE_ENV,
+            ConfigFormat.yaml: CONFIG_FILE_YAML,
+            ConfigFormat.json: CONFIG_FILE_JSON,
+            ConfigFormat.env: CONFIG_FILE_ENV,
         }[self]
 
 
@@ -144,19 +141,19 @@ class Settings(BaseSettings):
 
     # Application settings
     config_file: Path | None = None
-    data_dir: Path = DEFAULT_DATA_DIR
-    server_name: str = APP_NAME
-    engine: Engine = Engine.chat_history
+    data_dir: Path = Path(typer.get_app_dir(APP_NAME))
+    engine: Engines = Engines.chat_history
 
     # HTTP transport settings
     http_host: str = "127.0.0.1"
     http_port: int = 8000
 
-    # Engine-specific configs
+    # Engines configuration
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
 
-    # Prompts configuration
+    # Server configuration
+    server_name: str = "knowledge-base"
     prompts: PromptsConfig = PromptsConfig()
 
     # MARK: - Settings methods

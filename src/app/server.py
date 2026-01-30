@@ -6,7 +6,7 @@ from enum import Enum
 
 from fastmcp import FastMCP
 
-from app.config import Engine, get_settings
+from app.config import Engines, get_settings
 
 
 class Transport(str, Enum):
@@ -26,11 +26,11 @@ def init_server() -> FastMCP:
     )
 
     # Register engine-specific tools
-    if settings.engine == Engine.chat_history:
+    if settings.engine == Engines.chat_history:
         from engines.chat_history.tools import register
 
         register(mcp)
-    elif settings.engine == Engine.rag_anything:
+    elif settings.engine == Engines.rag_anything:
         from engines.rag_anything.tools import register
 
         register(mcp)

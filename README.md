@@ -61,10 +61,9 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## TODO
 
-- [ ] **Engine interface**: Define `EngineProtocol` with common method signatures; engines declare capabilities for optional features
+- [ ] **Engine interface**: Define `EngineProtocol` with common method signatures; engines declare capabilities for optional features; only register tools and commands the engine supports
 - [ ] **Federation engine**: Aggregate multiple memories; support direct config paths (instantiate engine) or server URLs (MCP client); and route requests based on capabilities
 - [ ] **Canonical data and metadata**: Store all records and attachments with metadata to allow import/export with engine migration
-- [ ] **Capability-based tool registration**: Only register tools and commands the engine supports
 - [ ] **Authorization**: Add API key support for HTTP server mode
 
 ## License

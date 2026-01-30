@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.config import Engine, Settings
+from app.config import Engines, Settings
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ class TestServerInit:
 
         assert config_module._settings is not None
         config_module._settings = Settings(
-            engine=Engine.chat_history,
+            engine=Engines.chat_history,
             data_dir=config_module._settings.data_dir,
         )
 
@@ -52,7 +52,7 @@ class TestServerInit:
 
         assert config_module._settings is not None
         config_module._settings = Settings(
-            engine=Engine.rag_anything,
+            engine=Engines.rag_anything,
             data_dir=config_module._settings.data_dir,
         )
 

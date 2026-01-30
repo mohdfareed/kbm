@@ -23,7 +23,7 @@ from rich.logging import RichHandler
 from typer.core import TyperGroup  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
-    from app.config import Engine
+    from app.config import Engines
 
 
 # MARK: CLI utilities
@@ -105,7 +105,7 @@ class LazyGroup(TyperGroup):  # type: ignore[misc]
     """
 
     # Maps subcommand name -> {engine: "module.attr"}
-    lazy_subcommands: ClassVar[dict[str, dict["Engine", str]]] = {}
+    lazy_subcommands: ClassVar[dict[str, dict["Engines", str]]] = {}
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         base = super().list_commands(ctx)
