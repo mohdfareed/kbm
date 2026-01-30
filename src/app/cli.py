@@ -72,13 +72,36 @@ def callback(
 
 
 @cli.command()
-def start() -> None:
+def start(
+    transport: Annotated[
+        Transport,
+        typer.Option("-t", "--transport", help="Server transport type."),
+    ] = Transport.stdio,
+    host: Annotated[
+        str | None,
+        typer.Option("--host", "-H", help="HTTP-based transport host."),
+    ] = None,
+    port: Annotated[
+        int | None,
+        typer.Option("--port", "-p", help="HTTP-based transport port."),
+    ] = None,
+) -> None:
     """Start the MCP server."""
     settings = get_settings()
-    print(f"Starting {settings.server_name} server (engine={settings.engine})...")
+
+    if transport == Transport.stdio:
+        print(f"Starting {settings.server_name} server (engine={settings.engine})...")
+    else:
+        effective_host = host or settings.http_host
+        effective_port = port or settings.http_port
+        print(
+            f"Starting {settings.server_name} server "
+            f"(engine={settings.engine}, transport={transport.value}) "
+            f"on {effective_host}:{effective_port}..."
+        )
 
     mcp = init_server()
-    start_server(mcp, Transport.stdio)
+    start_server(mcp, transport, host, port)
 
 
 @cli.command()
@@ -89,7 +112,7 @@ def version() -> None:
 
 @cli.command()
 def config(
-    fmt: Format = typer.Option(Format.json, "-f", "--format", help="Output format"),
+    fmt: Format = typer.Option(Format.json, "-f", "--format", help="Output format."),
 ) -> None:
     """Show current configuration."""
     settings = get_settings()
@@ -106,9 +129,9 @@ def config(
 
 @cli.command()
 def init(
-    path: Path | None = typer.Option(None, "-p", "--path", help="Output file path"),
-    fmt: Format = typer.Option(Format.yaml, "-f", "--format", help="Output format"),
-    force: bool = typer.Option(False, "-F", "--force", help="Overwrite existing file"),
+    path: Path | None = typer.Option(None, "-p", "--path", help="Output file path."),
+    fmt: Format = typer.Option(Format.yaml, "-f", "--format", help="Output format."),
+    force: bool = typer.Option(False, "-F", "--force", help="Overwrite existing file."),
 ) -> None:
     """Create a config file with default settings."""
     output = path or Path(fmt.filename)

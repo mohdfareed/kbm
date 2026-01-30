@@ -148,6 +148,10 @@ class Settings(BaseSettings):
     server_name: str = APP_NAME
     engine: Engine = Engine.chat_history
 
+    # HTTP transport settings
+    http_host: str = "127.0.0.1"
+    http_port: int = 8000
+
     # Engine-specific configs
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()

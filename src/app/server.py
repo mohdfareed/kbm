@@ -40,6 +40,28 @@ def init_server() -> FastMCP:
     return mcp
 
 
-def start_server(mcp: FastMCP, transport: Transport) -> None:
-    """Start the MCP server with the specified transport."""
-    mcp.run(transport=transport.value)
+def start_server(
+    mcp: FastMCP,
+    transport: Transport,
+    host: str | None = None,
+    port: int | None = None,
+) -> None:
+    """Start the MCP server with the specified transport.
+
+    Args:
+        mcp: The FastMCP server instance.
+        transport: Transport type (stdio, http, or streamable-http).
+        host: Host to bind to (HTTP transports only).
+        port: Port to bind to (HTTP transports only).
+    """
+    if transport == Transport.stdio:
+        mcp.run(transport=transport.value)
+        return
+
+    # HTTP transports require host and port
+    settings = get_settings()
+    mcp.run(
+        transport=transport.value,
+        host=host or settings.http_host,
+        port=port or settings.http_port,
+    )
