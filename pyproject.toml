@@ -43,8 +43,9 @@ src = ["src"]
 select = ["E", "I", "W", "RUF"]
 
 [tool.pyright]
-pythonVersion = "3.13"
+pythonVersion = "3.12"
 typeCheckingMode = "standard"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"

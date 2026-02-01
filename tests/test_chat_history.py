@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from app.config import ChatHistoryConfig
+from app.config import ChatHistoryConfig, Settings, init_settings
+from app.config import reset_settings as set_settings
 from engines.chat_history import ChatHistoryEngine
 
 
@@ -13,24 +14,20 @@ def engine(
     tmp_data_dir: Path, reset_settings: None, clean_env: None
 ) -> ChatHistoryEngine:
     """Create a chat history engine with temp directory."""
-    import app.config as config_module
-    from app.config import Settings, init_settings
-
-    config_module._settings = None
+    set_settings(None)
     init_settings()
     # Override data dir for testing
     settings = Settings(
         data_dir=tmp_data_dir,
         chat_history=ChatHistoryConfig(data_dir="records"),
     )
-    config_module._settings = settings
+    set_settings(settings)
     return ChatHistoryEngine()
 
 
 class TestInsert:
     """Insert operation tests."""
 
-    @pytest.mark.asyncio
     async def test_insert_text(self, engine: ChatHistoryEngine) -> None:
         """Insert text content returns confirmation message."""
         result = await engine.insert("test content")
@@ -40,7 +37,6 @@ class TestInsert:
         record_path = engine.data_dir / f"{doc_id}.json"
         assert record_path.exists()
 
-    @pytest.mark.asyncio
     async def test_insert_file(self, engine: ChatHistoryEngine, tmp_path: Path) -> None:
         """Insert file reads content from file."""
         test_file = tmp_path / "test.txt"
@@ -53,7 +49,6 @@ class TestInsert:
         record_path = engine.data_dir / "test.json"
         assert record_path.exists()
 
-    @pytest.mark.asyncio
     async def test_insert_file_not_found(self, engine: ChatHistoryEngine) -> None:
         """Insert file raises for missing file."""
         with pytest.raises(FileNotFoundError):
@@ -63,7 +58,6 @@ class TestInsert:
 class TestQuery:
     """Query operation tests."""
 
-    @pytest.mark.asyncio
     async def test_query_matches(self, engine: ChatHistoryEngine) -> None:
         """Query finds matching records."""
         await engine.insert("hello world")
@@ -72,14 +66,12 @@ class TestQuery:
         result = await engine.query("hello")
         assert "hello world" in result
 
-    @pytest.mark.asyncio
     async def test_query_case_insensitive(self, engine: ChatHistoryEngine) -> None:
         """Query is case-insensitive."""
         await engine.insert("Hello World")
         result = await engine.query("hello")
         assert "Hello World" in result
 
-    @pytest.mark.asyncio
     async def test_query_no_matches(self, engine: ChatHistoryEngine) -> None:
         """Query returns message when no matches."""
         await engine.insert("hello world")
@@ -90,7 +82,6 @@ class TestQuery:
 class TestDelete:
     """Delete operation tests."""
 
-    @pytest.mark.asyncio
     async def test_delete_existing(self, engine: ChatHistoryEngine) -> None:
         """Delete removes existing record."""
         result = await engine.insert("test")
@@ -100,7 +91,6 @@ class TestDelete:
         await engine.delete(doc_id)
         assert not (engine.data_dir / f"{doc_id}.json").exists()
 
-    @pytest.mark.asyncio
     async def test_delete_nonexistent(self, engine: ChatHistoryEngine) -> None:
         """Delete raises for missing record."""
         with pytest.raises(ValueError, match="not found"):
@@ -110,7 +100,6 @@ class TestDelete:
 class TestListRecords:
     """List records tests."""
 
-    @pytest.mark.asyncio
     async def test_list_returns_records(self, engine: ChatHistoryEngine) -> None:
         """List returns record information."""
         await engine.insert("content one")
@@ -120,7 +109,6 @@ class TestListRecords:
         # Result is a string with record IDs
         assert result.count("[") == 2  # Two records listed
 
-    @pytest.mark.asyncio
     async def test_list_empty(self, engine: ChatHistoryEngine) -> None:
         """List returns message when empty."""
         result = await engine.list_records()
@@ -130,7 +118,6 @@ class TestListRecords:
 class TestInfo:
     """Info operation tests."""
 
-    @pytest.mark.asyncio
     async def test_info_returns_metadata(self, engine: ChatHistoryEngine) -> None:
         """Info returns engine metadata as string."""
         await engine.insert("test")

@@ -68,6 +68,7 @@ def find_file(names: Iterable[str]) -> Path | None:
                 if path.is_file():
                     return path
             except PermissionError:
+                logging.warning("Permission denied accessing %s", path)
                 return None
 
         parent = current.parent

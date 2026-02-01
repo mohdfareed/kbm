@@ -13,6 +13,7 @@ __all__ = [
     "Settings",
     "get_settings",
     "init_settings",
+    "reset_settings",
 ]
 
 from enum import Enum
@@ -44,12 +45,12 @@ DEFAULT_CONFIG_FILE_JSON = f".{APP_NAME}.json"
 DEFAULT_CONFIG_FILE_YAML = f".{APP_NAME}.yaml"
 
 CONFIG_FILES = [
-    f".env",
+    ".env",
     # File-based
-    f"{DEFAULT_CONFIG_FILE}",
-    f"{DEFAULT_CONFIG_FILE_ENV}",
-    f"{DEFAULT_CONFIG_FILE_JSON}",
-    f"{DEFAULT_CONFIG_FILE_YAML}",
+    DEFAULT_CONFIG_FILE,
+    DEFAULT_CONFIG_FILE_ENV,
+    DEFAULT_CONFIG_FILE_JSON,
+    DEFAULT_CONFIG_FILE_YAML,
     f"{DEFAULT_CONFIG_FILE}.yml",
     # Directory-based
     Path(DEFAULT_CONFIG_FILE) / "config",
@@ -231,3 +232,9 @@ def init_settings(config_path: Path | None = None) -> Settings:
         _settings = Settings()
 
     return _settings
+
+
+def reset_settings(settings: Settings | None = None) -> None:
+    """Reset or replace the settings singleton (for testing)."""
+    global _settings
+    _settings = settings

@@ -6,7 +6,8 @@ from typing import Generator
 
 import pytest
 
-from app.config import APP_NAME
+from app.config import APP_NAME, get_settings
+from app.config import reset_settings as _reset_settings
 
 
 @pytest.fixture
@@ -20,11 +21,12 @@ def tmp_data_dir(tmp_path: Path) -> Generator[Path, None, None]:
 @pytest.fixture
 def reset_settings() -> Generator[None, None, None]:
     """Reset global settings singleton after test."""
-    import app.config as config_module
-
-    original = config_module._settings
+    try:
+        original = get_settings()
+    except RuntimeError:
+        original = None
     yield
-    config_module._settings = original
+    _reset_settings(original)
 
 
 @pytest.fixture

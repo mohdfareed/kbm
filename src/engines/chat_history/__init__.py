@@ -3,6 +3,7 @@
 __all__ = ["ChatHistoryEngine"]
 
 import json
+import logging
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -11,6 +12,8 @@ from pathlib import Path
 from app.config import get_settings
 from app.engine import Capability
 from engines import register_engine
+
+logger = logging.getLogger(__name__)
 
 
 @register_engine("chat-history")
@@ -49,7 +52,7 @@ class ChatHistoryEngine:
             f"Record count: {record_count}"
         )
 
-    async def query(self, query: str) -> str:
+    async def query(self, query: str, top_k: int = 10) -> str:
         """Search records for matching content using substring matching."""
         results = []
 
@@ -59,9 +62,10 @@ class ChatHistoryEngine:
                 content = record.get("content", "")
                 if query.lower() in content.lower():
                     results.append(record)
-                    if len(results) >= 10:
+                    if len(results) >= top_k:
                         break
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning("Skipping corrupted record %s: %s", path.name, e)
                 continue
 
         if not results:
@@ -69,7 +73,9 @@ class ChatHistoryEngine:
 
         output = []
         for r in results:
-            output.append(f"[{r['id']}] {r['created_at']}\n{r['content'][:200]}...")
+            content = r["content"]
+            preview = f"{content[:200]}..." if len(content) > 200 else content
+            output.append(f"[{r['id']}] {r['created_at']}\n{preview}")
         return "\n\n".join(output)
 
     async def insert(self, content: str) -> str:
@@ -91,6 +97,8 @@ class ChatHistoryEngine:
         path = Path(file_path).expanduser().resolve()
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
+        if not path.is_file():
+            raise ValueError(f"Path is not a file: {file_path}")
 
         content = path.read_text(encoding="utf-8")
         doc_id = path.stem
@@ -111,16 +119,20 @@ class ChatHistoryEngine:
             raise ValueError(f"Record not found: {record_id}")
         return f"Deleted record: {record_id}"
 
-    async def list_records(self) -> str:
+    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
         """List all records with their IDs and creation dates."""
         records = []
-        for path in sorted(self.data_dir.glob("*.json")):
+        all_paths = sorted(self.data_dir.glob("*.json"))
+        paginated = all_paths[offset : offset + limit]
+
+        for path in paginated:
             try:
                 record = json.loads(path.read_text(encoding="utf-8"))
                 records.append(
                     f"[{record['id']}] {record.get('created_at', 'unknown')}"
                 )
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning("Skipping corrupted record %s: %s", path.name, e)
                 continue
 
         if not records:

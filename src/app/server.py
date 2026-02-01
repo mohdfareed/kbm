@@ -3,12 +3,16 @@
 __all__ = ["Transport", "init_server", "start_server"]
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from fastmcp import FastMCP
 
 from app.config import get_settings
 from app.engine import CAPABILITY_METHODS, REQUIRED_METHODS
 from engines import get_engine
+
+if TYPE_CHECKING:
+    from app.engine import EngineProtocol
 
 
 class Transport(str, Enum):
@@ -60,7 +64,7 @@ def start_server(
     )
 
 
-def _register_tools(mcp: FastMCP, engine) -> None:
+def _register_tools(mcp: FastMCP, engine: "EngineProtocol") -> None:
     """Register tools based on engine capabilities.
 
     FastMCP introspects method signatures automatically - no manual

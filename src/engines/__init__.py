@@ -2,20 +2,16 @@
 
 __all__ = ["create_engine_app", "get_engine", "register_engine"]
 
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
 
 import typer
 
 from app.config import get_settings
 from app.engine import CAPABILITY_METHODS, REQUIRED_METHODS, EngineProtocol
 from app.helpers import get_docstring, make_sync_command
-from engines import get_engine
-
-if TYPE_CHECKING:
-    from app.engine import EngineProtocol
 
 # Registry is module-level by necessity - decorators populate it at class definition
-_registry: dict[str, type["EngineProtocol"]] = {}
+_registry: dict[str, type[EngineProtocol]] = {}
 
 
 def register_engine(name: str):

@@ -58,7 +58,7 @@ Engine(s) — storage backend
 | ------------- | ------------------- | -------------------------------------- |
 | Language      | Python 3.11+        | MCP SDK, ML ecosystem                  |
 | MCP Framework | FastMCP 3           | Pythonic MCP framework, cleaner API    |
-| RAG/Retrieval | RAG-Anything        | Multimodal, built on LightRAG          |
+| RAG/Retrieval | RAG-Anything        | Multi-modal, built on LightRAG          |
 | Metadata DB   | SQLite              | Config, provenance, canonical copies   |
 | Config        | Pydantic Settings   | Type-safe, env + files + args          |
 | CLI           | Typer               | Modern, type-hint based                |

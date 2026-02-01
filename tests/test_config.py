@@ -12,6 +12,7 @@ from app.config import (
     get_settings,
     init_settings,
 )
+from app.config import reset_settings as set_settings
 
 
 class TestSettings:
@@ -65,9 +66,7 @@ class TestSettingsManagement:
 
     def test_get_settings_uninitialized(self, reset_settings: None) -> None:
         """get_settings raises before init."""
-        import app.config as config_module
-
-        config_module._settings = None
+        set_settings(None)
         with pytest.raises(RuntimeError, match="not initialized"):
             get_settings()
 
@@ -79,9 +78,7 @@ class TestSettingsManagement:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """init_settings works without config file."""
-        import app.config as config_module
-
-        config_module._settings = None
+        set_settings(None)
         # Change to empty dir so no config file is found
         monkeypatch.chdir(tmp_path)
         settings = init_settings()
@@ -92,9 +89,7 @@ class TestSettingsManagement:
         self, tmp_path: Path, reset_settings: None, clean_env: None
     ) -> None:
         """init_settings loads specified YAML config."""
-        import app.config as config_module
-
-        config_module._settings = None
+        set_settings(None)
         config_file = tmp_path / "config.yaml"
         config_file.write_text(f"server_name: custom-server\ndata_dir: {tmp_path}\n")
         settings = init_settings(config_file)

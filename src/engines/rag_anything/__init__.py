@@ -86,12 +86,14 @@ class RAGAnythingEngine:
     async def insert_file(self, file_path: str) -> str:
         """Parse and ingest a file (PDF, image, etc.) into the knowledge graph.
 
-        Documents are processed with multimodal understanding and linked
+        Documents are processed with multi-modal understanding and linked
         into the knowledge graph for semantic retrieval.
         """
         path = Path(file_path).expanduser().resolve()
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
+        if not path.is_file():
+            raise ValueError(f"Path is not a file: {file_path}")
 
         lightrag = await self._get_lightrag()
         rag = self._get_rag(lightrag)
