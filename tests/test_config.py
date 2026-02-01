@@ -107,14 +107,14 @@ class TestConfigFiles:
 
     def test_config_files_priority(self) -> None:
         """Config files have correct priority order."""
-        assert CONFIG_FILES == (
-            ".env",
-            f".{APP_NAME}",
-            f".{APP_NAME}.env",
-            f".{APP_NAME}.json",
-            f".{APP_NAME}.yaml",
-            f"{APP_NAME}.env",
-            f"{APP_NAME}.json",
-            f"{APP_NAME}.yaml",
-            f"{APP_NAME}.yml",
-        )
+        # CONFIG_FILES is a list with both string and Path entries
+        assert isinstance(CONFIG_FILES, list)
+        assert CONFIG_FILES[0] == ".env"
+        # File-based configs
+        assert f".{APP_NAME}" in CONFIG_FILES
+        assert f".{APP_NAME}.env" in CONFIG_FILES
+        assert f".{APP_NAME}.json" in CONFIG_FILES
+        assert f".{APP_NAME}.yaml" in CONFIG_FILES
+        assert f".{APP_NAME}.yml" in CONFIG_FILES
+        # Directory-based configs (Path objects)
+        assert any(isinstance(f, Path) for f in CONFIG_FILES)

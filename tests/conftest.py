@@ -28,13 +28,14 @@ def reset_settings() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def reset_chat_engine() -> Generator[None, None, None]:
-    """Reset chat history engine singleton after test."""
-    import engines.chat_history as engine_module
+def reset_engine_registry() -> Generator[None, None, None]:
+    """Reset engine registry after test."""
+    from engines import _registry
 
-    original = engine_module._engine
+    original = _registry.copy()
     yield
-    engine_module._engine = original
+    _registry.clear()
+    _registry.update(original)
 
 
 @pytest.fixture

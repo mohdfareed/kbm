@@ -64,14 +64,8 @@ class TestServerInit:
     def test_init_unknown_engine(
         self, configured_settings: None, reset_settings: None
     ) -> None:
-        """Server raises for unknown engine."""
-        import app.config as config_module
+        """Settings validation rejects unknown engine."""
+        from pydantic import ValidationError
 
-        # Force an invalid engine value
-        settings = config_module._settings
-        object.__setattr__(settings, "engine", "invalid")
-
-        from app.server import init_server
-
-        with pytest.raises(ValueError, match="Unknown engine"):
-            init_server()
+        with pytest.raises(ValidationError):
+            Settings(engine="invalid")  # type: ignore[arg-type]

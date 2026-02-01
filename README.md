@@ -21,7 +21,7 @@ kbm -h
 
 ```sh
 kbm init               # create default config file
-kbm start              # start MCP server (stdio)
+kbm start stdio        # start MCP server (stdio transport)
 kbm memory query "x"   # search the knowledge base
 kbm memory insert "y"  # add content
 ```
@@ -42,8 +42,8 @@ kbm memory insert "y"  # add content
 Settings load from a config file (`.env`, `.kbm.json`, or `.kbm/config.json`) with env var overrides. Supports ENV, JSON, and YAML formats. The file is discovered automatically, or can be specified with `--config`.
 
 ```sh
-kbm init --format json         # create default .kbm.json
-kbm config                     # show current config
+kbm init --format json  # create default .kbm.json
+kbm config              # show current config
 ```
 
 **Key settings:**
@@ -66,19 +66,15 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## TODO
 
-- [ ] **Engine interface (*Future-Proofing*)**: Define `EngineProtocol` with common method signatures; engines declare capabilities for optional features; only register tools and commands the engine supports
-  - Insert (text, files), query, delete, list_records
-  - Capabilities implemented using `EngineCapabilities` enum
-  - Optional: pagination
+- [ ] **Canonical data and metadata (*Portability*)**: Store all records and attachments with metadata to allow import/export and engine migration
+  - Uses SQLite or similar for structured storage
+  - Metadata: source, timestamp, tags, original engine ,etc.
+  - Import/export commands (JSONL, CSV, raw, etc.)
 - [ ] **Federation engine (*Scalability*)**: Aggregate multiple memories; support direct config paths (instantiate engine) or server URLs (MCP client); and route requests based on capabilities
   - Implements `EngineProtocol`
   - Routes requests to sub-engines based on capabilities
   - Aggregation strategies (e.g. merge results, round-robin, priority-based)
   - Allows writing by allowing model to specify target knowledge base
-- [ ] **Canonical data and metadata (*Portability*)**: Store all records and attachments with metadata to allow import/export and engine migration
-  - Uses SQLite or similar for structured storage
-  - Metadata: source, timestamp, tags, original engine ,etc.
-  - Import/export commands (JSONL, CSV, raw, etc.)
 
 **Future Enhancements:**
 

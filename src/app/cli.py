@@ -15,13 +15,13 @@ from app.config import (
     DESCRIPTION,
     VERSION,
     ConfigFormat,
-    Engines,
     Settings,
     get_settings,
     init_settings,
 )
 from app.helpers import LazyGroup, configure_logging, settings_to_env
 from app.server import Transport, init_server, start_server
+from engines import create_engine_app
 
 # MARK: CLI setup
 
@@ -33,11 +33,8 @@ cli = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
-# Register lazy subcommands (loaded based on engine in settings)
-LazyGroup.lazy_subcommands["memory"] = {
-    Engines.chat_history: "engines.chat_history.commands.app",
-    Engines.rag_anything: "engines.rag_anything.commands.app",
-}
+# Register lazy subcommands (deferred until config is available)
+LazyGroup.lazy_commands["memory"] = create_engine_app
 
 
 # MARK: CLI initialization
@@ -75,7 +72,7 @@ def callback(
 def start(
     transport: Annotated[
         Transport,
-        typer.Option("-t", "--transport", help="Server transport type."),
+        typer.Argument(help="Server transport type."),
     ] = Transport.stdio,
     host: Annotated[
         str | None,

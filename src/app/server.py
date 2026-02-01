@@ -6,7 +6,9 @@ from enum import Enum
 
 from fastmcp import FastMCP
 
-from app.config import Engines, get_settings
+from app.config import get_settings
+from app.engine import CAPABILITY_METHODS, REQUIRED_METHODS
+from engines import get_engine
 
 
 class Transport(str, Enum):
@@ -25,17 +27,8 @@ def init_server() -> FastMCP:
         instructions=settings.prompts.server_instructions,
     )
 
-    # Register engine-specific tools
-    if settings.engine == Engines.chat_history:
-        from engines.chat_history.tools import register
-
-        register(mcp)
-    elif settings.engine == Engines.rag_anything:
-        from engines.rag_anything.tools import register
-
-        register(mcp)
-    else:
-        raise ValueError(f"Unknown engine: {settings.engine}")
+    engine = get_engine(settings.engine.value)
+    _register_tools(mcp, engine)
 
     return mcp
 
@@ -65,3 +58,21 @@ def start_server(
         host=host or settings.http_host,
         port=port or settings.http_port,
     )
+
+
+def _register_tools(mcp: FastMCP, engine) -> None:
+    """Register tools based on engine capabilities.
+
+    FastMCP introspects method signatures automatically - no manual
+    parameter handling needed. Just pass the bound method.
+    """
+    for method in REQUIRED_METHODS:
+        mcp.add_tool(getattr(engine, method.__name__))
+
+    for cap, method in CAPABILITY_METHODS.items():
+        if cap in engine.capabilities:
+            mcp.add_tool(getattr(engine, method.__name__))
+
+    # Engine-specific extras
+    for extra_tool in engine.get_extra_tools():
+        mcp.add_tool(extra_tool)

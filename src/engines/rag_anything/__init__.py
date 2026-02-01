@@ -1,10 +1,10 @@
-"""RAG-Anything engine - multimodal RAG with knowledge graphs."""
+"""RAG-Anything engine - multi-modal RAG with knowledge graphs."""
 
-__all__ = ["RAGAnythingEngine", "get_engine"]
+__all__ = ["RAGAnythingEngine"]
 
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from lightrag import LightRAG
 from lightrag.llm.openai import openai_complete_if_cache, openai_embed
@@ -12,20 +12,17 @@ from lightrag.utils import EmbeddingFunc
 from raganything import RAGAnything, RAGAnythingConfig
 
 from app.config import get_settings
-
-_engine: "RAGAnythingEngine | None" = None
-
-
-def get_engine() -> "RAGAnythingEngine":
-    """Get or create the engine instance."""
-    global _engine
-    if _engine is None:
-        _engine = RAGAnythingEngine()
-    return _engine
+from app.engine import Capability
+from engines import register_engine
 
 
+@register_engine("rag-anything")
 class RAGAnythingEngine:
-    """RAG-Anything engine wrapping multimodal RAG with knowledge graphs."""
+    """Multi-modal RAG engine with knowledge graphs powered by RAG-Anything.
+
+    Supports semantic search across ingested documents using knowledge graphs.
+    Does not support delete or list operations due to knowledge graph architecture.
+    """
 
     def __init__(self) -> None:
         """Initialize the RAG-Anything engine."""
@@ -48,42 +45,49 @@ class RAGAnythingEngine:
         self._lightrag: LightRAG | None = None
         self._rag: RAGAnything | None = None
 
-    async def query(self, query: str, **kwargs: Any) -> str:
-        """Query the knowledge base.
+    @property
+    def capabilities(self) -> Capability:
+        """RAG-Anything supports insert and file insertion."""
+        return Capability.INSERT | Capability.INSERT_FILE
 
-        Kwargs:
-            mode: Query mode (local/global/hybrid/naive/mix)
+    # MARK: - Public methods
+
+    async def info(self) -> str:
+        """Get memory metadata including model configuration."""
+        return (
+            f"Engine: rag-anything\n"
+            f"Working directory: {self.working_dir}\n"
+            f"LLM model: {self.config.llm_model}\n"
+            f"Embedding model: {self.config.embedding_model}"
+        )
+
+    async def query(self, query: str) -> str:
+        """Search the knowledge graph using hybrid mode (local + global)."""
+        return await self._query_with_mode(query, "hybrid")
+
+    async def insert(self, content: str) -> str:
+        """Add text content to the knowledge graph.
+
+        Content is chunked, embedded, and linked into the knowledge graph
+        for semantic retrieval.
         """
-        mode = kwargs.get("mode", "hybrid")
         lightrag = await self._get_lightrag()
         rag = self._get_rag(lightrag)
-        return await rag.aquery(query, mode=mode)
 
-    async def insert(self, content: str, **kwargs: Any) -> str:
-        """Insert content into the knowledge base.
-
-        Kwargs:
-            doc_id: Custom document ID
-        """
-        doc_id = kwargs.get("doc_id")
-        lightrag = await self._get_lightrag()
-        rag = self._get_rag(lightrag)
-
-        # Create a content list for insertion
         content_list = [{"type": "text", "text": content, "page_idx": 0}]
 
         await rag.insert_content_list(
             content_list=content_list,
             file_path="text_insert.txt",
-            doc_id=doc_id,
+            doc_id=None,
         )
-        return doc_id or "auto-generated"
+        return "Content inserted into knowledge graph"
 
-    async def insert_file(self, file_path: str, **kwargs: Any) -> str:
-        """Insert a file into the knowledge base.
+    async def insert_file(self, file_path: str) -> str:
+        """Parse and ingest a file (PDF, image, etc.) into the knowledge graph.
 
-        Kwargs:
-            doc_id: Custom document ID
+        Documents are processed with multimodal understanding and linked
+        into the knowledge graph for semantic retrieval.
         """
         path = Path(file_path).expanduser().resolve()
         if not path.exists():
@@ -92,51 +96,32 @@ class RAGAnythingEngine:
         lightrag = await self._get_lightrag()
         rag = self._get_rag(lightrag)
 
-        # Use process_document_complete for full document processing
         await rag.process_document_complete(
             file_path=str(path),
             output_dir=str(self.working_dir / "output"),
         )
-        return kwargs.get("doc_id") or path.stem
+        return f"File ingested into knowledge graph: {path.name}"
 
-    async def delete(self, record_id: str) -> None:
-        """Remove a record from the knowledge base.
+    # MARK: - Engine-specific extras
 
-        Note: RAG-Anything doesn't have a direct delete API.
-        """
-        raise NotImplementedError(
-            "Delete is not supported by RAG-Anything. Remove the working_dir to reset."
-        )
+    async def query_local(self, query: str) -> str:
+        """Search using only local context (no graph traversal)."""
+        return await self._query_with_mode(query, "local")
 
-    async def list_records(self, **kwargs: Any) -> list[dict]:
-        """List records in the knowledge base.
+    async def query_global(self, query: str) -> str:
+        """Search using global knowledge graph themes."""
+        return await self._query_with_mode(query, "global")
 
-        Note: RAG-Anything uses knowledge graphs, not document lists.
-        """
-        raise NotImplementedError(
-            "List records is not supported by RAG-Anything. "
-            "Use query to search the knowledge base."
-        )
+    def get_extra_tools(self) -> list[Callable]:
+        """Return query mode variants as extra tools."""
+        return [self.query_local, self.query_global]
 
-    async def info(self) -> dict:
-        """Get engine information."""
-        return {
-            "engine": "rag-anything",
-            "working_dir": str(self.working_dir),
-            "llm_model": self.config.llm_model,
-            "embedding_model": self.config.embedding_model,
-            "embedding_dim": self.config.embedding_dim,
-            "enable_image_processing": self.config.enable_image_processing,
-            "enable_table_processing": self.config.enable_table_processing,
-            "enable_equation_processing": self.config.enable_equation_processing,
-        }
+    # Note: delete() and list_records() not implemented - not in capabilities
 
     # MARK: - Private methods
 
     def _get_embedding_func(self) -> EmbeddingFunc:
         """Create the embedding function."""
-        # Use openai_embed.func to avoid double-wrapping
-        # (openai_embed is already an EmbeddingFunc)
         return EmbeddingFunc(
             embedding_dim=self.config.embedding_dim,
             max_token_size=8192,
@@ -157,7 +142,7 @@ class RAGAnythingEngine:
             prompt: str,
             system_prompt: str | None = None,
             history_messages: list | None = None,
-            **kwargs: Any,
+            **kwargs,
         ) -> str:
             return await openai_complete_if_cache(
                 self.config.llm_model,
@@ -174,7 +159,6 @@ class RAGAnythingEngine:
             llm_model_func=llm_model_func,
             embedding_func=self._get_embedding_func(),
         )
-        # Initialize storages (loads existing data from disk)
         await self._lightrag.initialize_storages()
         return self._lightrag
 
@@ -195,3 +179,9 @@ class RAGAnythingEngine:
             config=config,
         )
         return self._rag
+
+    async def _query_with_mode(self, query: str, mode: str) -> str:
+        """Internal: query with specific mode."""
+        lightrag = await self._get_lightrag()
+        rag = self._get_rag(lightrag)
+        return await rag.aquery(query, mode=mode)

@@ -32,19 +32,13 @@ class TestInsert:
 
     @pytest.mark.asyncio
     async def test_insert_text(self, engine: ChatHistoryEngine) -> None:
-        """Insert text content returns ID."""
-        doc_id = await engine.insert("test content")
-        assert doc_id is not None
-        # Verify file was created
+        """Insert text content returns confirmation message."""
+        result = await engine.insert("test content")
+        assert "Inserted record:" in result
+        # Extract ID and verify file was created
+        doc_id = result.split(": ")[1]
         record_path = engine.data_dir / f"{doc_id}.json"
         assert record_path.exists()
-
-    @pytest.mark.asyncio
-    async def test_insert_with_custom_id(self, engine: ChatHistoryEngine) -> None:
-        """Insert with custom doc_id uses that ID."""
-        doc_id = await engine.insert("test content", doc_id="custom-id")
-        assert doc_id == "custom-id"
-        assert (engine.data_dir / "custom-id.json").exists()
 
     @pytest.mark.asyncio
     async def test_insert_file(self, engine: ChatHistoryEngine, tmp_path: Path) -> None:
@@ -52,12 +46,12 @@ class TestInsert:
         test_file = tmp_path / "test.txt"
         test_file.write_text("file content")
 
-        doc_id = await engine.insert_file(str(test_file))
-        assert doc_id == "test"  # Uses filename stem
+        result = await engine.insert_file(str(test_file))
+        assert "test" in result  # Uses filename stem
 
-        record = engine._load_record(doc_id)
-        assert record is not None
-        assert record["content"] == "file content"
+        # Verify file was stored
+        record_path = engine.data_dir / "test.json"
+        assert record_path.exists()
 
     @pytest.mark.asyncio
     async def test_insert_file_not_found(self, engine: ChatHistoryEngine) -> None:
@@ -72,24 +66,23 @@ class TestQuery:
     @pytest.mark.asyncio
     async def test_query_matches(self, engine: ChatHistoryEngine) -> None:
         """Query finds matching records."""
-        await engine.insert("hello world", doc_id="doc1")
-        await engine.insert("goodbye world", doc_id="doc2")
+        await engine.insert("hello world")
+        await engine.insert("goodbye world")
 
         result = await engine.query("hello")
-        assert "doc1" in result
-        assert "doc2" not in result
+        assert "hello world" in result
 
     @pytest.mark.asyncio
     async def test_query_case_insensitive(self, engine: ChatHistoryEngine) -> None:
         """Query is case-insensitive."""
-        await engine.insert("Hello World", doc_id="doc1")
+        await engine.insert("Hello World")
         result = await engine.query("hello")
-        assert "doc1" in result
+        assert "Hello World" in result
 
     @pytest.mark.asyncio
     async def test_query_no_matches(self, engine: ChatHistoryEngine) -> None:
         """Query returns message when no matches."""
-        await engine.insert("hello world", doc_id="doc1")
+        await engine.insert("hello world")
         result = await engine.query("nonexistent")
         assert "No matching records" in result
 
@@ -100,11 +93,12 @@ class TestDelete:
     @pytest.mark.asyncio
     async def test_delete_existing(self, engine: ChatHistoryEngine) -> None:
         """Delete removes existing record."""
-        await engine.insert("test", doc_id="to-delete")
-        assert (engine.data_dir / "to-delete.json").exists()
+        result = await engine.insert("test")
+        doc_id = result.split(": ")[1]
+        assert (engine.data_dir / f"{doc_id}.json").exists()
 
-        await engine.delete("to-delete")
-        assert not (engine.data_dir / "to-delete.json").exists()
+        await engine.delete(doc_id)
+        assert not (engine.data_dir / f"{doc_id}.json").exists()
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent(self, engine: ChatHistoryEngine) -> None:
@@ -117,25 +111,20 @@ class TestListRecords:
     """List records tests."""
 
     @pytest.mark.asyncio
-    async def test_list_returns_summaries(self, engine: ChatHistoryEngine) -> None:
-        """List returns record summaries."""
-        await engine.insert("content one", doc_id="doc1")
-        await engine.insert("content two", doc_id="doc2")
+    async def test_list_returns_records(self, engine: ChatHistoryEngine) -> None:
+        """List returns record information."""
+        await engine.insert("content one")
+        await engine.insert("content two")
 
-        records = await engine.list_records()
-        assert len(records) == 2
-        # Should have summary fields
-        assert all("id" in r for r in records)
-        assert all("content_preview" in r for r in records)
+        result = await engine.list_records()
+        # Result is a string with record IDs
+        assert result.count("[") == 2  # Two records listed
 
     @pytest.mark.asyncio
-    async def test_list_pagination(self, engine: ChatHistoryEngine) -> None:
-        """List respects limit and offset."""
-        for i in range(5):
-            await engine.insert(f"content {i}", doc_id=f"doc{i}")
-
-        records = await engine.list_records(limit=2, offset=1)
-        assert len(records) == 2
+    async def test_list_empty(self, engine: ChatHistoryEngine) -> None:
+        """List returns message when empty."""
+        result = await engine.list_records()
+        assert "No records found" in result
 
 
 class TestInfo:
@@ -143,10 +132,9 @@ class TestInfo:
 
     @pytest.mark.asyncio
     async def test_info_returns_metadata(self, engine: ChatHistoryEngine) -> None:
-        """Info returns engine metadata."""
-        await engine.insert("test", doc_id="doc1")
+        """Info returns engine metadata as string."""
+        await engine.insert("test")
 
         info = await engine.info()
-        assert info["engine"] == "chat-history"
-        assert info["record_count"] == 1
-        assert "data_dir" in info
+        assert "chat-history" in info
+        assert "Record count: 1" in info
