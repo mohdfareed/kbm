@@ -15,11 +15,12 @@ from app.config import (
     VERSION,
     ConfigFormat,
     Settings,
+    Transport,
     get_settings,
     init_settings,
 )
 from app.helpers import configure_logging, error
-from app.server import Transport, init_server, start_server
+from app.server import init_server, start_server
 
 cli = typer.Typer(
     name=APP_NAME,
@@ -80,9 +81,9 @@ def callback(
 @cli.command()
 def start(
     transport: Annotated[
-        Transport,
+        Transport | None,
         typer.Argument(help="Server transport type."),
-    ] = Transport.STDIO,
+    ] = None,
     host: Annotated[
         str | None,
         typer.Option("--host", "-H", help="HTTP transport host."),
@@ -94,8 +95,9 @@ def start(
 ) -> None:
     """Start the MCP server."""
     settings = get_settings()
+    effective_transport = transport or settings.transport
 
-    match transport:
+    match effective_transport:
         case Transport.STDIO:
             print(
                 f"[bold]Starting[/bold] {settings.server_name} "
@@ -110,7 +112,7 @@ def start(
                 f"on {effective_host}:{effective_port}"
             )
         case _:
-            error(f"Unsupported transport: {transport}")
+            error(f"Unsupported transport: {effective_transport}")
 
     mcp = init_server()
     start_server(mcp, transport, host, port)
@@ -122,10 +124,17 @@ def config(
         ConfigFormat,
         typer.Option("-f", "--format", help="Output format."),
     ] = ConfigFormat.JSON,
+    all_engines: Annotated[
+        bool,
+        typer.Option("--all", help="Include all engine configs."),
+    ] = False,
 ) -> None:
     """Show current configuration."""
     settings = get_settings()
-    data = settings.model_dump(mode="json")
+    if all_engines:
+        data = settings.model_dump(mode="json")
+    else:
+        data = settings.model_dump_active(mode="json")
     print(fmt.dumps(data))
 
 
@@ -181,7 +190,6 @@ def query(
     top_k: Annotated[int, typer.Option("--top-k", "-k", help="Max results")] = 10,
 ) -> None:
     """Search the knowledge base."""
-
     from engines import get_engine
 
     settings = get_settings()

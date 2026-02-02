@@ -10,6 +10,7 @@ __all__ = [
     "Engine",
     "RAGAnythingConfig",
     "Settings",
+    "Transport",
     "get_settings",
     "init_settings",
     "reset_settings",
@@ -55,6 +56,14 @@ class Engine(str, Enum):
 
     CHAT_HISTORY = "chat-history"
     RAG_ANYTHING = "rag-anything"
+
+
+class Transport(str, Enum):
+    """MCP server transport options."""
+
+    STDIO = "stdio"
+    HTTP = "http"
+    STREAMABLE_HTTP = "streamable-http"
 
 
 class ConfigFormat(str, Enum):
@@ -155,7 +164,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path(typer.get_app_dir(APP_NAME))
     engine: Engine = Engine.CHAT_HISTORY
 
-    # HTTP transport settings
+    # Server transport settings
+    transport: Transport = Transport.STDIO
     http_host: str = "127.0.0.1"
     http_port: int = 8000
 
@@ -189,6 +199,16 @@ class Settings(BaseSettings):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.engine_data_dir.mkdir(parents=True, exist_ok=True)
         return self
+
+    def model_dump_active(self, **kwargs) -> dict:
+        """Dump settings including only the active engine's config."""
+        exclude_engines = set()
+        if self.engine != Engine.CHAT_HISTORY:
+            exclude_engines.add("chat_history")
+        if self.engine != Engine.RAG_ANYTHING:
+            exclude_engines.add("rag_anything")
+
+        return self.model_dump(exclude=exclude_engines, **kwargs)
 
     @classmethod
     def settings_customise_sources(

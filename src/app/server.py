@@ -1,21 +1,11 @@
 """MCP server."""
 
-__all__ = ["Transport", "init_server", "start_server"]
-
-from enum import Enum
+__all__ = ["init_server", "start_server"]
 
 from fastmcp import FastMCP
 
-from app.config import get_settings
+from app.config import Transport, get_settings
 from app.engine import Operation
-
-
-class Transport(str, Enum):
-    """MCP server transport options."""
-
-    STDIO = "stdio"
-    HTTP = "http"
-    STREAMABLE_HTTP = "streamable-http"
 
 
 def init_server() -> FastMCP:
@@ -42,7 +32,7 @@ def init_server() -> FastMCP:
 
 def start_server(
     mcp: FastMCP,
-    transport: Transport,
+    transport: Transport | None = None,
     host: str | None = None,
     port: int | None = None,
 ) -> None:
@@ -51,10 +41,10 @@ def start_server(
 
     match transport:
         case Transport.STDIO:
-            mcp.run(transport=transport.value)
+            mcp.run(transport=transport.value or settings.transport.value)
         case Transport.HTTP | Transport.STREAMABLE_HTTP:
             mcp.run(
-                transport=transport.value,
+                transport=transport.value or settings.transport.value,
                 host=host or settings.http_host,
                 port=port or settings.http_port,
             )
