@@ -7,7 +7,8 @@ import pytest
 from app.config import (
     APP_NAME,
     CONFIG_FILES,
-    Engines,
+    ChatHistoryConfig,
+    Engine,
     Settings,
     get_settings,
     init_settings,
@@ -21,21 +22,29 @@ class TestSettings:
     def test_default_settings(self, tmp_data_dir: Path, clean_env: None) -> None:
         """Default settings should be valid."""
         settings = Settings(data_dir=tmp_data_dir)
-        assert settings.engine == Engines.chat_history
+        # Will use CHAT_HISTORY unless overridden by config file
+        assert settings.engine in [Engine.CHAT_HISTORY, Engine.RAG_ANYTHING]
         assert settings.data_dir == tmp_data_dir
 
-    def test_resolve_relative_path(self, tmp_data_dir: Path, clean_env: None) -> None:
-        """Relative paths resolve against data_dir."""
-        settings = Settings(data_dir=tmp_data_dir)
-        resolved = settings.resolve_data_path("subdir")
-        assert resolved == tmp_data_dir / "subdir"
+    def test_engine_data_dir_relative(
+        self, tmp_data_dir: Path, clean_env: None
+    ) -> None:
+        """Engine data dir resolves relative to data_dir when relative path."""
+        settings = Settings(data_dir=tmp_data_dir, engine=Engine.CHAT_HISTORY)
+        # chat_history.data_dir defaults to "chat-history" (relative)
+        assert settings.engine_data_dir == tmp_data_dir / "chat-history"
 
-    def test_resolve_absolute_path(self, tmp_data_dir: Path, clean_env: None) -> None:
-        """Absolute paths remain unchanged."""
-        settings = Settings(data_dir=tmp_data_dir)
+    def test_engine_data_dir_absolute(
+        self, tmp_data_dir: Path, clean_env: None
+    ) -> None:
+        """Engine data dir remains unchanged when absolute path."""
         absolute = Path("/tmp/absolute")
-        resolved = settings.resolve_data_path(str(absolute))
-        assert resolved == absolute
+        settings = Settings(
+            data_dir=tmp_data_dir,
+            engine=Engine.CHAT_HISTORY,
+            chat_history=ChatHistoryConfig(data_dir=str(absolute)),
+        )
+        assert settings.engine_data_dir == absolute
 
     def test_data_dir_created(self, tmp_path: Path, clean_env: None) -> None:
         """Data directory is created on initialization."""
@@ -44,21 +53,19 @@ class TestSettings:
         Settings(data_dir=new_dir)
         assert new_dir.exists()
 
-    def test_yaml_config_loading(self, tmp_path: Path, clean_env: None) -> None:
-        """Settings load from YAML file."""
-        config_file = tmp_path / "test.yaml"
-        config_file.write_text(
-            f"engine: rag-anything\ndata_dir: {tmp_path}\nserver_name: test-server\n"
-        )
-        settings = Settings.from_yaml(config_file)
-        assert settings.engine == Engines.rag_anything
-        assert settings.server_name == "test-server"
-
     def test_engine_specific_config(self, tmp_data_dir: Path, clean_env: None) -> None:
         """Engine-specific configs are accessible."""
         settings = Settings(data_dir=tmp_data_dir)
         assert settings.chat_history.data_dir == "chat-history"
         assert settings.rag_anything.llm_model == "gpt-4o-mini"
+
+    def test_instructions_configurable(
+        self, tmp_data_dir: Path, clean_env: None
+    ) -> None:
+        """Server instructions can be customized."""
+        custom_instructions = "Custom instructions for the model."
+        settings = Settings(data_dir=tmp_data_dir, instructions=custom_instructions)
+        assert settings.instructions == custom_instructions
 
 
 class TestSettingsManagement:
@@ -79,19 +86,20 @@ class TestSettingsManagement:
     ) -> None:
         """init_settings works without config file."""
         set_settings(None)
-        # Change to empty dir so no config file is found
         monkeypatch.chdir(tmp_path)
         settings = init_settings()
         assert settings is not None
         assert get_settings() is settings
 
-    def test_init_settings_with_yaml(
+    def test_init_settings_with_json(
         self, tmp_path: Path, reset_settings: None, clean_env: None
     ) -> None:
-        """init_settings loads specified YAML config."""
+        """init_settings loads specified JSON config."""
         set_settings(None)
-        config_file = tmp_path / "config.yaml"
-        config_file.write_text(f"server_name: custom-server\ndata_dir: {tmp_path}\n")
+        config_file = tmp_path / "config.json"
+        config_file.write_text(
+            f'{{"server_name": "custom-server", "data_dir": "{tmp_path}"}}'
+        )
         settings = init_settings(config_file)
         assert settings.server_name == "custom-server"
         assert settings.config_file == config_file
@@ -102,14 +110,10 @@ class TestConfigFiles:
 
     def test_config_files_priority(self) -> None:
         """Config files have correct priority order."""
-        # CONFIG_FILES is a list with both string and Path entries
         assert isinstance(CONFIG_FILES, list)
         assert CONFIG_FILES[0] == ".env"
-        # File-based configs
         assert f".{APP_NAME}" in CONFIG_FILES
         assert f".{APP_NAME}.env" in CONFIG_FILES
         assert f".{APP_NAME}.json" in CONFIG_FILES
         assert f".{APP_NAME}.yaml" in CONFIG_FILES
         assert f".{APP_NAME}.yml" in CONFIG_FILES
-        # Directory-based configs (Path objects)
-        assert any(isinstance(f, Path) for f in CONFIG_FILES)

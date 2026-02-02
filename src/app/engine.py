@@ -1,99 +1,132 @@
-"""Engine protocol and capability definitions."""
+"""Engine protocol and operation definitions."""
 
-__all__ = ["CAPABILITY_METHODS", "REQUIRED_METHODS", "Capability", "EngineProtocol"]
+__all__ = ["EngineProtocol", "Operation"]
 
-from collections.abc import Callable
-from enum import Flag, auto
+from enum import Enum, auto
 from typing import Protocol, runtime_checkable
 
 
-class Capability(Flag):
-    """Optional features an engine may support.
+class Operation(Enum):
+    """Operations that engines can support.
 
-    Engines declare capabilities via their `capabilities` property.
-    Server/CLI only register operations for declared capabilities.
-
-    Note: `info()` and `query()` are always required and not gated.
+    All engines must support INFO and QUERY.
+    Other operations are optional and declared via supported_operations.
     """
 
-    NONE = 0
+    INFO = auto()
+    QUERY = auto()
     INSERT = auto()
     INSERT_FILE = auto()
     DELETE = auto()
-    LIST = auto()
+    LIST_RECORDS = auto()
+
+    @property
+    def method_name(self) -> str:
+        """Get the corresponding method name for this operation."""
+        return self.name.lower()
+
+
+# Required operations that all engines must support
+REQUIRED_OPERATIONS: frozenset[Operation] = frozenset({Operation.INFO, Operation.QUERY})
+
+# Optional operations that engines may support
+OPTIONAL_OPERATIONS: frozenset[Operation] = frozenset(
+    {
+        Operation.INSERT,
+        Operation.INSERT_FILE,
+        Operation.DELETE,
+        Operation.LIST_RECORDS,
+    }
+)
 
 
 @runtime_checkable
 class EngineProtocol(Protocol):
     """Contract all memory engines must fulfill.
 
-    Engines implement this protocol and declare which capabilities
-    they support. The server registers tools only for supported
-    capabilities—models never see operations that would fail.
+    Engines implement this protocol and declare which operations they support
+    via the `supported_operations` property. The server only registers tools
+    for supported operations-models never see tools that would fail.
 
-    Required:
-        - capabilities: Declare supported operations
+    All engines must support:
         - info(): Returns engine metadata
         - query(): Search/retrieve from memory
-        - get_extra_tools(): Return engine-specific tools (can be empty)
 
-    Optional (capability-gated):
-        - insert(): Requires INSERT
-        - insert_file(): Requires INSERT_FILE
-        - delete(): Requires DELETE
-        - list_records(): Requires LIST
+    Optional operations (declared via supported_operations):
+        - insert: Add text content
+        - insert_file: Parse and add a file
+        - delete: Remove a record
+        - list_records: List all records
     """
 
     @property
-    def capabilities(self) -> Capability:
-        """Declare which optional features this engine supports."""
-        ...
+    def supported_operations(self) -> frozenset[Operation]:
+        """Declare which operations this engine supports.
 
-    async def info(self) -> str:
-        """Return engine/memory metadata. Always available."""
-        ...
-
-    async def query(self, query: str) -> str:
-        """Retrieve relevant records. Always required."""
-        ...
-
-    async def insert(self, content: str) -> str:
-        """Add text content. Requires INSERT capability."""
-        ...
-
-    async def insert_file(self, file_path: str) -> str:
-        """Parse and add a file. Requires INSERT_FILE capability."""
-        ...
-
-    async def delete(self, record_id: str) -> str:
-        """Remove a record. Requires DELETE capability."""
-        ...
-
-    async def list_records(self) -> str:
-        """List all records. Requires LIST capability."""
-        ...
-
-    def get_extra_tools(self) -> list[Callable]:
-        """Return engine-specific tools to register.
-
-        Engines can expose additional features beyond the core protocol.
-        Each callable should be an async function with a docstring.
-        Returns empty list by default.
+        Must include at minimum: {Operation.INFO, Operation.QUERY}.
+        May also include: INSERT, INSERT_FILE, DELETE, LIST_RECORDS.
         """
         ...
 
+    async def info(self) -> str:
+        """Get information about the knowledge base."""
+        ...
 
-# Method mappings - single source of truth for tool/command registration.
-# Using actual method references ensures type checking and refactoring support.
+    async def query(self, query: str, top_k: int = 10) -> str:
+        """Search the knowledge base for relevant information.
 
-REQUIRED_METHODS: list[Callable] = [
-    EngineProtocol.info,
-    EngineProtocol.query,
-]
+        Args:
+            query: The search query.
+            top_k: Maximum number of results to return.
 
-CAPABILITY_METHODS: dict[Capability, Callable] = {
-    Capability.INSERT: EngineProtocol.insert,
-    Capability.INSERT_FILE: EngineProtocol.insert_file,
-    Capability.DELETE: EngineProtocol.delete,
-    Capability.LIST: EngineProtocol.list_records,
-}
+        Returns:
+            Formatted string with matching records.
+        """
+        ...
+
+    async def insert(self, content: str, doc_id: str | None = None) -> str:
+        """Insert text content into the knowledge base.
+
+        Args:
+            content: The text content to insert.
+            doc_id: Optional custom document ID (auto-generated if not provided).
+
+        Returns:
+            Confirmation message with the record ID.
+        """
+        ...
+
+    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
+        """Insert a file into the knowledge base (PDF, image, etc.).
+
+        Args:
+            file_path: Path to the file to insert.
+            doc_id: Optional custom document ID (auto-generated if not provided).
+
+        Returns:
+            Confirmation message with the record ID.
+        """
+        ...
+
+    async def delete(self, record_id: str) -> str:
+        """Delete a record from the knowledge base by its ID.
+
+        Args:
+            record_id: The ID of the record to delete.
+
+        Returns:
+            Confirmation message.
+        """
+        ...
+
+    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
+        """List records in the knowledge base.
+
+        Args:
+            limit: Maximum number of records to return.
+            offset: Number of records to skip.
+
+        Returns:
+            Formatted string with record IDs and metadata.
+        """
+        ...

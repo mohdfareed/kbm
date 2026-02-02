@@ -41,7 +41,7 @@ Memory (writable)                OR      View (read-only aggregate)
     │
     │ uses
     ▼
-Engine(s) — storage backend
+Engine(s) - storage backend
 ```
 
 **Key properties:**
@@ -89,16 +89,16 @@ Always prefer these scripts over raw `uv` commands to ensure consistent behavior
 | `insert_file` | Parse & add a file (PDF, image, etc.) | `file_path: str` |
 | `query`       | Retrieve relevant records             | `query: str`     |
 | `delete`      | Remove a record by ID                 | `record_id: str` |
-| `list`        | List all records in memory            | —                |
-| `info`        | Get memory metadata                   | —                |
+| `list`        | List all records in memory            | -                |
+| `info`        | Get memory metadata                   | -                |
 
 ### View Server (Read-Only)
 
 | Tool    | Description                             | Required Params |
 | ------- | --------------------------------------- | --------------- |
 | `query` | Federated search across source memories | `query: str`    |
-| `list`  | List records across source memories     | —               |
-| `info`  | Get view metadata                       | —               |
+| `list`  | List records across source memories     | -               |
+| `info`  | Get view metadata                       | -               |
 
 ## Data Ownership
 

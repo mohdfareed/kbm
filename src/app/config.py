@@ -7,8 +7,7 @@ __all__ = [
     "VERSION",
     "ChatHistoryConfig",
     "ConfigFormat",
-    "Engines",
-    "PromptsConfig",
+    "Engine",
     "RAGAnythingConfig",
     "Settings",
     "get_settings",
@@ -16,76 +15,85 @@ __all__ = [
     "reset_settings",
 ]
 
+import json
 from enum import Enum
 from importlib.metadata import metadata, version
 from pathlib import Path
-from typing import Self
 
 import typer
+import yaml
 from pydantic import BaseModel, model_validator
 from pydantic_settings import (
     BaseSettings,
-    DotEnvSettingsSource,
-    EnvSettingsSource,
-    JsonConfigSettingsSource,
+    PydanticBaseSettingsSource,
     SettingsConfigDict,
-    YamlConfigSettingsSource,
 )
 
-from app.helpers import find_file
+from app.helpers import error, find_file, settings_to_env
 
 APP_NAME = "kbm"
 VERSION = version(APP_NAME)
 DESCRIPTION = metadata(APP_NAME)["Summary"]
 
-# Config file names in priority order (without extensions)
-DEFAULT_CONFIG_FILE = f".{APP_NAME}"
-DEFAULT_CONFIG_FILE_ENV = f".{APP_NAME}.env"
-DEFAULT_CONFIG_FILE_JSON = f".{APP_NAME}.json"
-DEFAULT_CONFIG_FILE_YAML = f".{APP_NAME}.yaml"
 
+# MARK: Enums
+
+
+# Config file names in priority order
 CONFIG_FILES = [
     ".env",
-    # File-based
-    DEFAULT_CONFIG_FILE,
-    DEFAULT_CONFIG_FILE_ENV,
-    DEFAULT_CONFIG_FILE_JSON,
-    DEFAULT_CONFIG_FILE_YAML,
-    f"{DEFAULT_CONFIG_FILE}.yml",
-    # Directory-based
-    Path(DEFAULT_CONFIG_FILE) / "config",
-    Path(DEFAULT_CONFIG_FILE) / "config.env",
-    Path(DEFAULT_CONFIG_FILE) / "config.json",
-    Path(DEFAULT_CONFIG_FILE) / "config.yaml",
-    Path(DEFAULT_CONFIG_FILE) / "config.yml",
+    f".{APP_NAME}",
+    f".{APP_NAME}.env",
+    f".{APP_NAME}.json",
+    f".{APP_NAME}.yaml",
+    f".{APP_NAME}.yml",
 ]
 
 
-class Engines(str, Enum):
+class Engine(str, Enum):
     """Available storage engines."""
 
-    chat_history = "chat-history"
-    rag_anything = "rag-anything"
+    CHAT_HISTORY = "chat-history"
+    RAG_ANYTHING = "rag-anything"
 
 
 class ConfigFormat(str, Enum):
     """Config file output formats."""
 
-    yaml = "yaml"
-    json = "json"
-    env = "env"
+    JSON = "json"
+    YAML = "yaml"
+    ENV = "env"
 
     @property
     def filename(self) -> str:
         """Default config filename for this format."""
-        return {
-            ConfigFormat.yaml: DEFAULT_CONFIG_FILE_YAML,
-            ConfigFormat.json: DEFAULT_CONFIG_FILE_JSON,
-            ConfigFormat.env: DEFAULT_CONFIG_FILE_ENV,
-        }[self]
+        match self:
+            case ConfigFormat.JSON:
+                return f".{APP_NAME}.json"
+            case ConfigFormat.YAML:
+                return f".{APP_NAME}.yaml"
+            case ConfigFormat.ENV:
+                return f".{APP_NAME}.env"
+
+    def dumps(self, data: dict) -> str:
+        """Serialize data to string in this format."""
+        match self:
+            case ConfigFormat.JSON:
+                return json.dumps(data, indent=2)
+            case ConfigFormat.YAML:
+                return yaml.safe_dump(data, sort_keys=False).rstrip()
+            case ConfigFormat.ENV:
+                return "\n".join(settings_to_env(data, APP_NAME))
+
+    def write(self, path: "Path", data: dict) -> None:
+        """Write data to file in this format."""
+        content = self.dumps(data)
+        if not content.endswith("\n"):
+            content += "\n"
+        path.write_text(content)
 
 
-# MARK: Engine settings
+# MARK: Engine Configs
 
 
 class ChatHistoryConfig(BaseModel):
@@ -108,35 +116,33 @@ class RAGAnythingConfig(BaseModel):
     embedding_model: str = "text-embedding-3-large"
     embedding_dim: int = 3072
 
+    # Query settings
+    query_mode: str = "hybrid"  # hybrid, local, global, naive, mix
+
     # Processing toggles
     enable_image_processing: bool = True
     enable_table_processing: bool = True
     enable_equation_processing: bool = True
 
 
-# MARK: Prompts settings
+# MARK: App Settings
 
-# Default server instruction - conveys the continuity concept
-DEFAULT_SERVER_INSTRUCTIONS = """\
-You have access to the user's knowledge base — a persistent memory that spans \
+
+# Default server instructions
+DEFAULT_INSTRUCTIONS = """\
+You have access to the user's knowledge base - a persistent memory that spans \
 conversations, tools, and time. Query it to recall context from previous \
 sessions, and insert information worth preserving for future conversations. \
 Treat it as shared memory: any model the user talks to can access it, so \
 store things in a way that would be useful to a fresh model with no prior context.
-""".strip()
-
-
-class PromptsConfig(BaseModel):
-    """MCP server prompts configuration."""
-
-    server_instructions: str = DEFAULT_SERVER_INSTRUCTIONS
-
-
-# MARK: App settings
+"""
 
 
 class Settings(BaseSettings):
-    """Application settings."""
+    """Application settings.
+
+    Priority (highest to lowest): CLI args > env vars > config file > defaults.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix=f"{APP_NAME.upper()}_",
@@ -147,63 +153,85 @@ class Settings(BaseSettings):
     # Application settings
     config_file: Path | None = None
     data_dir: Path = Path(typer.get_app_dir(APP_NAME))
-    engine: Engines = Engines.chat_history
+    engine: Engine = Engine.CHAT_HISTORY
 
     # HTTP transport settings
     http_host: str = "127.0.0.1"
     http_port: int = 8000
 
-    # Engines configuration
+    # Engine-specific configuration
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
 
-    # Server configuration
-    server_name: str = "knowledge-base"
-    prompts: PromptsConfig = PromptsConfig()
+    # Server configuration (user-customizable)
+    server_name: str = "memories"
+    instructions: str = DEFAULT_INSTRUCTIONS.strip()
 
-    # MARK: - Settings methods
+    # MARK: Miscellaneous
 
-    def resolve_data_path(self, path: str) -> Path:
-        """Resolve a data path (relative to app data_dir, or absolute)."""
-        p = Path(path)
-        return p if p.is_absolute() else self.data_dir / p
+    @property
+    def engine_data_dir(self) -> Path:
+        """Resolved data directory for the current engine (not serialized)."""
+        match self.engine:
+            case Engine.CHAT_HISTORY:
+                rel_path = self.chat_history.data_dir
+            case Engine.RAG_ANYTHING:
+                rel_path = self.rag_anything.data_dir
+            case _:
+                error(f"Unknown engine: {self.engine}")
+
+        path = Path(rel_path)
+        return path if path.is_absolute() else self.data_dir / path
 
     @model_validator(mode="after")
-    def ensure_data_dir(self) -> "Settings":
-        """Create app data directory."""
+    def _ensure_directories(self) -> "Settings":
+        """Create required directories."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.engine_data_dir.mkdir(parents=True, exist_ok=True)
         return self
 
-    # MARK: - Loading from files
-
     @classmethod
-    def from_yaml(cls, path: Path) -> Self:
-        """Load settings from a YAML file."""
-        file_settings = YamlConfigSettingsSource(cls, path)()
-        return cls(**cls._merge_with_env(file_settings), config_file=path)
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customize settings sources.
 
-    @classmethod
-    def from_json(cls, path: Path) -> Self:
-        """Load settings from a JSON file."""
-        file_settings = JsonConfigSettingsSource(cls, path)()
-        return cls(**cls._merge_with_env(file_settings), config_file=path)
+        Priority (highest to lowest): init args > env vars > config file.
+        """
+        from pydantic_settings import (
+            DotEnvSettingsSource,
+            JsonConfigSettingsSource,
+            YamlConfigSettingsSource,
+        )
 
-    @classmethod
-    def from_env(cls, path: Path) -> Self:
-        """Load settings from a .env file."""
-        file_settings = DotEnvSettingsSource(cls, path)()
-        return cls(**cls._merge_with_env(file_settings), config_file=path)
+        sources: list[PydanticBaseSettingsSource] = [init_settings, env_settings]
 
-    @classmethod
-    def _merge_with_env(cls, file_settings: dict) -> dict:
-        """Merge file settings with env vars (env vars take precedence)."""
-        env_settings = EnvSettingsSource(cls, case_sensitive=False)()
-        return {**file_settings, **env_settings}
+        # Find config file (searches up directory tree)
+        config_file = _pending_config_file or find_file(CONFIG_FILES)
+
+        if config_file:
+            suffix = config_file.suffix.lower()
+            match suffix:
+                case ".yaml" | ".yml":
+                    sources.append(YamlConfigSettingsSource(settings_cls, config_file))
+                case ".json":
+                    sources.append(JsonConfigSettingsSource(settings_cls, config_file))
+                case _:
+                    # Treat as dotenv (.env, .kbm, etc.)
+                    sources.append(DotEnvSettingsSource(settings_cls, config_file))
+
+        return tuple(sources)
 
 
-# MARK: Settings management
+# MARK: Settings Management
 
 _settings: Settings | None = None
+_pending_config_file: Path | None = None
 
 
 def get_settings() -> Settings:
@@ -215,22 +243,20 @@ def get_settings() -> Settings:
 
 def init_settings(config_path: Path | None = None) -> Settings:
     """Initialize settings with optional config file override."""
-    global _settings
+    global _settings, _pending_config_file
 
-    # Find config file if not provided
-    config_file = config_path.resolve() if config_path else find_file(CONFIG_FILES)
+    # Store config path for settings_customise_sources to use
+    _pending_config_file = config_path.resolve() if config_path else None
 
-    # Load from file based on type, or default
+    # Create settings (triggers settings_customise_sources)
+    _settings = Settings()
+
+    # Store which config file was actually used
+    config_file = _pending_config_file or find_file(CONFIG_FILES)
     if config_file:
-        if config_file.suffix in (".yaml", ".yml"):
-            _settings = Settings.from_yaml(config_file)
-        elif config_file.suffix == ".json":
-            _settings = Settings.from_json(config_file)
-        else:
-            _settings = Settings.from_env(config_file)
-    else:
-        _settings = Settings()
+        _settings.config_file = config_file
 
+    _pending_config_file = None
     return _settings
 
 

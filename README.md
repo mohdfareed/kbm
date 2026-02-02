@@ -1,8 +1,8 @@
-# KBM — Knowledge Base Manager
+# KBM - Knowledge Base Manager
 
 Persistent memory for LLMs via the [Model Context Protocol](https://modelcontextprotocol.io/).
 
-KBM gives any MCP-compatible client (IDEs, ChatGPT, Claude, etc.) access to a shared knowledge base. Context accumulates across conversations, tools, and time — so every model you talk to can pick up where the last one left off.
+KBM gives any MCP-compatible client (IDEs, ChatGPT, Claude, etc.) access to a shared knowledge base. Context accumulates across conversations, tools, and time - so every model you talk to can pick up where the last one left off.
 
 ## Requirements
 

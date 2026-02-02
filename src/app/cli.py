@@ -2,13 +2,12 @@
 
 __all__ = ["cli"]
 
-import json
+import asyncio
 from pathlib import Path
 from typing import Annotated
 
 import typer
-import yaml
-from rich import print, print_json
+from rich import print
 
 from app.config import (
     APP_NAME,
@@ -19,29 +18,24 @@ from app.config import (
     get_settings,
     init_settings,
 )
-from app.helpers import LazyGroup, configure_logging, settings_to_env
+from app.helpers import configure_logging, error
 from app.server import Transport, init_server, start_server
-from engines import create_engine_app
-
-# MARK: CLI setup
 
 cli = typer.Typer(
     name=APP_NAME,
     help=DESCRIPTION,
     no_args_is_help=True,
-    cls=LazyGroup,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
-# Register lazy subcommands (deferred until config is available)
-LazyGroup.lazy_commands["memory"] = create_engine_app
 
-
-# MARK: CLI initialization
+def _version_callback(value: bool) -> None:
+    if value:
+        print(f"{APP_NAME} {VERSION}")
+        raise typer.Exit()
 
 
 def _config_callback(config: Path | None) -> Path | None:
-    """Load config before command resolution."""
     init_settings(config)
     return config
 
@@ -50,22 +44,37 @@ def _config_callback(config: Path | None) -> Path | None:
 def callback(
     debug: Annotated[
         bool,
-        typer.Option("--debug", "-d", help="Enable debug output logging"),
+        typer.Option(
+            "--debug",
+            "-d",
+            help="Enable debug logging.",
+            callback=lambda v: configure_logging(v),
+            is_eager=True,
+        ),
     ] = False,
-    config: Path | None = typer.Option(
-        None,
-        "-c",
-        "--config",
-        help="Path to config file",
-        callback=_config_callback,
-        is_eager=True,
-    ),
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-v",
+            help="Show version and exit.",
+            callback=_version_callback,
+            is_eager=True,
+        ),
+    ] = False,
+    config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            "-c",
+            help="Path to config file.",
+            callback=_config_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ) -> None:
-    """CLI application entry point."""
-    configure_logging(debug=debug)
-
-
-# MARK: CLI commands
+    """Knowledge Base Manager - Persistent memory for LLMs via MCP."""
+    pass
 
 
 @cli.command()
@@ -73,84 +82,110 @@ def start(
     transport: Annotated[
         Transport,
         typer.Argument(help="Server transport type."),
-    ] = Transport.stdio,
+    ] = Transport.STDIO,
     host: Annotated[
         str | None,
-        typer.Option("--host", "-H", help="HTTP-based transport host."),
+        typer.Option("--host", "-H", help="HTTP transport host."),
     ] = None,
     port: Annotated[
         int | None,
-        typer.Option("--port", "-p", help="HTTP-based transport port."),
+        typer.Option("--port", "-p", help="HTTP transport port."),
     ] = None,
 ) -> None:
     """Start the MCP server."""
     settings = get_settings()
 
-    if transport == Transport.stdio:
-        print(f"Starting {settings.server_name} server (engine={settings.engine})...")
-    else:
-        effective_host = host or settings.http_host
-        effective_port = port or settings.http_port
-        print(
-            f"Starting {settings.server_name} server "
-            f"(engine={settings.engine}, transport={transport.value}) "
-            f"on {effective_host}:{effective_port}..."
-        )
+    match transport:
+        case Transport.STDIO:
+            print(
+                f"[bold]Starting[/bold] {settings.server_name} "
+                f"[dim](engine={settings.engine.value})[/dim]"
+            )
+        case Transport.HTTP | Transport.STREAMABLE_HTTP:
+            effective_host = host or settings.http_host
+            effective_port = port or settings.http_port
+            print(
+                f"[bold]Starting[/bold] {settings.server_name} "
+                f"[dim](engine={settings.engine.value})[/dim] "
+                f"on {effective_host}:{effective_port}"
+            )
+        case _:
+            error(f"Unsupported transport: {transport}")
 
     mcp = init_server()
     start_server(mcp, transport, host, port)
 
 
 @cli.command()
-def version() -> None:
-    """Show the version number."""
-    print(f"{APP_NAME} {VERSION}")
-
-
-@cli.command()
 def config(
-    fmt: ConfigFormat = typer.Option(
-        ConfigFormat.json, "-f", "--format", help="Output format."
-    ),
+    fmt: Annotated[
+        ConfigFormat,
+        typer.Option("-f", "--format", help="Output format."),
+    ] = ConfigFormat.JSON,
 ) -> None:
     """Show current configuration."""
     settings = get_settings()
     data = settings.model_dump(mode="json")
-
-    if fmt == ConfigFormat.yaml:
-        print(yaml.safe_dump(data, sort_keys=False).rstrip())
-    elif fmt == ConfigFormat.json:
-        print_json(json.dumps(data, indent=2))
-    elif fmt == ConfigFormat.env:
-        lines = settings_to_env(data, APP_NAME)
-        print("\n".join(lines))
+    print(fmt.dumps(data))
 
 
 @cli.command()
 def init(
-    path: Path | None = typer.Option(None, "-p", "--path", help="Output file path."),
-    fmt: ConfigFormat = typer.Option(
-        ConfigFormat.yaml, "-f", "--format", help="Output format."
-    ),
-    force: bool = typer.Option(False, "-F", "--force", help="Overwrite existing file."),
+    path: Annotated[
+        Path | None,
+        typer.Option("-p", "--path", help="Output file path."),
+    ] = None,
+    fmt: Annotated[
+        ConfigFormat,
+        typer.Option("-f", "--format", help="Output format."),
+    ] = ConfigFormat.YAML,
+    force: Annotated[
+        bool,
+        typer.Option("-F", "--force", help="Overwrite existing file."),
+    ] = False,
 ) -> None:
     """Create a config file with default settings."""
     output = path or Path(fmt.filename)
-    if output.exists() and not force:
-        print("error: File already exists. Use --force to overwrite.")
-        raise typer.Exit(1)
 
-    # Get default settings and prep for writing
+    if output.exists() and not force:
+        error(f"File already exists: {output}. Use --force to overwrite.")
+
+    # Exclude config_file since it's runtime-determined, not user-configurable
     defaults = Settings().model_dump(mode="json", exclude={"config_file"})
     output.parent.mkdir(parents=True, exist_ok=True)
-    env_lines = settings_to_env(defaults, APP_NAME)
+    fmt.write(output, defaults)
 
-    # Write config file
-    if fmt == ConfigFormat.yaml:
-        output.write_text(yaml.safe_dump(defaults, sort_keys=False))
-    elif fmt == ConfigFormat.json:
-        output.write_text(json.dumps(defaults, indent=2) + "\n")
-    elif fmt == ConfigFormat.env:
-        output.write_text("\n".join(env_lines) + "\n")
+    print(f"[bold]Created[/bold] config file: {output}")
 
-    print(f"Created config file: {output}")
+
+@cli.command()
+def info() -> None:
+    """Show engine and data path information."""
+    from engines import get_engine
+
+    settings = get_settings()
+    engine = get_engine(settings.engine)
+
+    ops = sorted(op.name.lower() for op in engine.supported_operations)
+
+    print(f"[bold]Engine:[/bold]     {settings.engine.value}")
+    print(f"[bold]Server:[/bold]     {settings.server_name}")
+    print(f"[bold]Data:[/bold]       {settings.data_dir}")
+    print(f"[bold]Engine data:[/bold] {settings.engine_data_dir}")
+    print(f"[bold]Operations:[/bold]\n\t - {'\n\t - '.join(ops)}")
+
+
+@cli.command()
+def query(
+    query_text: Annotated[str, typer.Argument(help="Search query")],
+    top_k: Annotated[int, typer.Option("--top-k", "-k", help="Max results")] = 10,
+) -> None:
+    """Search the knowledge base."""
+
+    from engines import get_engine
+
+    settings = get_settings()
+    engine = get_engine(settings.engine)
+
+    result = asyncio.run(engine.query(query_text, top_k=top_k))
+    print(result)

@@ -30,17 +30,6 @@ def reset_settings() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def reset_engine_registry() -> Generator[None, None, None]:
-    """Reset engine registry after test."""
-    from engines import _registry
-
-    original = _registry.copy()
-    yield
-    _registry.clear()
-    _registry.update(original)
-
-
-@pytest.fixture
 def clean_env() -> Generator[None, None, None]:
     """Remove env vars for clean config tests."""
     env_vars = {
@@ -49,4 +38,5 @@ def clean_env() -> Generator[None, None, None]:
     for k in env_vars:
         del os.environ[k]
     yield
+    # Restore env vars
     os.environ.update(env_vars)
