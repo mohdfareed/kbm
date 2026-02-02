@@ -42,7 +42,7 @@ def start_server(
     match transport:
         case Transport.STDIO:
             mcp.run(transport=transport.value or settings.transport.value)
-        case Transport.HTTP | Transport.STREAMABLE_HTTP:
+        case Transport.HTTP:
             mcp.run(
                 transport=transport.value or settings.transport.value,
                 host=host or settings.http_host,

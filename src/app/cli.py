@@ -103,7 +103,7 @@ def start(
                 f"[bold]Starting[/bold] {settings.server_name} "
                 f"[dim](engine={settings.engine.value})[/dim]"
             )
-        case Transport.HTTP | Transport.STREAMABLE_HTTP:
+        case Transport.HTTP:
             effective_host = host or settings.http_host
             effective_port = port or settings.http_port
             print(

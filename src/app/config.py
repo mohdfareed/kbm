@@ -63,7 +63,6 @@ class Transport(str, Enum):
 
     STDIO = "stdio"
     HTTP = "http"
-    STREAMABLE_HTTP = "streamable-http"
 
 
 class ConfigFormat(str, Enum):
