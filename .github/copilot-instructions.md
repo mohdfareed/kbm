@@ -15,96 +15,97 @@ KBM solves context fragmentation across LLM tools. Instead of conversations bein
 
 ## Terminology
 
-| Term       | Definition                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------ |
-| **Memory** | Scoped container of records (e.g., "health memory", "work memory"). Owns data and derived indexes.     |
-| **Record** | Individual unit of content (text or file) within a Memory. Has ID, content, and metadata.              |
-| **View**   | Read-only aggregate. Federates queries across multiple Memories. Does not own records.                 |
-| **Server** | Execution boundary. Hosts exactly one Memory or View. Enforces permissions. Runs locally or remotely.  |
-| **Engine** | Swappable storage implementation. A Memory uses one or more Engines (storage, vectors, graphs).        |
+| Term               | Definition                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Knowledge Base** | The whole system - all memories. What KBM manages.                                          |
+| **Memory**         | Scoped container of records (`.kbm/` or `~/<data>/kbm/memories/<name>/`). Has config + data.|
+| **Record**         | Individual unit of content (text or file) within a Memory.                                  |
+| **Engine**         | Swappable storage implementation (chat-history, rag-anything).                              |
 
-## Architecture
+## Project Structure
 
 ```
-Client (IDE, ChatGPT, etc.)
-    │
-    │ connects to
-    ▼
-Server (auth, tools, transport)
-    │
-    │ hosts
-    ▼
-Memory (writable)                OR      View (read-only aggregate)
-├── Records                              ├── Source servers list
-├── Attachments                          └── Optional local index
-└── Derived indexes
-    │
-    │ uses
-    ▼
-Engine(s) - storage backend
+src/kbm/              # Single package
+├── __init__.py       # Public exports
+├── config.py         # Settings, enums
+├── engine.py         # EngineProtocol, Operation enum
+├── server.py         # MCP server
+├── helpers.py        # Utilities (logging, errors)
+├── cli/              # CLI subpackage
+│   ├── __init__.py   # Typer app, global options
+│   ├── memory.py     # init, delete, list commands
+│   └── server.py     # start, status, path commands
+└── engines/          # Engine implementations
+    ├── __init__.py   # get_engine factory
+    ├── chat_history.py
+    └── rag_anything.py
 ```
 
-**Key properties:**
+## CLI
 
-- Each Server is its own trust boundary
-- Permissions enforced at Server level via tokens
-- Views federate queries to multiple Servers
-- Local use: Server via stdio (IDE, offline)
-- Remote use: Server over HTTP
+```
+kbm [-m <memory>] [-d] [-v] [-h] <command>
+
+Options:
+  -m, --memory   Memory name or path (like git -C)
+  -d, --debug    Enable debug logging
+  -v, --version  Show version
+  -h, --help     Show help
+
+Commands:
+  init [name]    Create memory (local .kbm/ or global)
+  delete <name>  Delete a global memory
+  list           List all memories
+  start          Start MCP server
+  status         Show memory configuration
+  path           Print resolved memory path
+```
+
+## Memory Layout
+
+```
+.kbm/                 # or ~/.../kbm/memories/<name>/
+├── config.yaml       # Settings (engine, transport, etc.)
+└── data/             # Engine-managed data
+    └── <engine>/     # e.g., chat-history/, rag-anything/
+```
 
 ## Technology Stack
 
-| Component     | Choice              | Rationale                              |
-| ------------- | ------------------- | -------------------------------------- |
-| Language      | Python 3.11+        | MCP SDK, ML ecosystem                  |
-| MCP Framework | FastMCP 3           | Pythonic MCP framework, cleaner API    |
-| RAG/Retrieval | RAG-Anything        | Multi-modal, built on LightRAG          |
-| Metadata DB   | SQLite              | Config, provenance, canonical copies   |
-| Config        | Pydantic Settings   | Type-safe, env + files + args          |
-| CLI           | Typer               | Modern, type-hint based                |
-| Distribution  | pipx                | CLI install with zero friction         |
+| Component     | Choice            | Rationale                            |
+| ------------- | ----------------- | ------------------------------------ |
+| Language      | Python 3.12+      | MCP SDK, ML ecosystem                |
+| MCP Framework | FastMCP 3         | Pythonic, cleaner API                |
+| RAG/Retrieval | RAG-Anything      | Multi-modal, built on LightRAG       |
+| Config        | Pydantic Settings | Type-safe, env + files               |
+| CLI           | Typer             | Modern, type-hint based              |
+| Distribution  | pipx              | CLI install with zero friction       |
 
-**Note:** FastMCP 3 is in beta; expect rapid iteration. Always consult the docs.
-
-**Dev tooling:** uv (packages), ruff (lint/format), pytest (tests)
+**Dev tooling:** uv (packages), ruff (lint/format), pyright (types), pytest (tests)
 
 ## Scripts
 
-Use the scripts under `scripts/` for common operations:
+| Script             | Purpose                                    |
+| ------------------ | ------------------------------------------ |
+| `scripts/run.sh`   | Run the CLI (`./scripts/run.sh <command>`) |
+| `scripts/setup.sh` | Lock & sync dependencies                   |
+| `scripts/check.sh` | Lint, type-check, test                     |
 
-| Script            | Purpose                                      |
-| ----------------- | -------------------------------------------- |
-| `scripts/run.sh`  | Run the CLI (`./scripts/run.sh <command>`)   |
-| `scripts/setup.sh`| Lock & sync dependencies                     |
+## MCP Tools
 
-Always prefer these scripts over raw `uv` commands to ensure consistent behavior.
+| Tool           | Description                   |
+| -------------- | ----------------------------- |
+| `query`        | Search the knowledge base     |
+| `insert`       | Add text content              |
+| `insert_file`  | Add a file (PDF, image, etc.) |
+| `delete`       | Remove a record by ID         |
+| `list_records` | List all records              |
+| `info`         | Get knowledge base metadata   |
 
-## MCP Tool Surface
+## Key Patterns
 
-### Memory Server (Writable)
+**Settings:** `Settings.use(name_or_path)` sets memory path, then `Settings()` loads config.
 
-| Tool          | Description                           | Required Params  |
-| ------------- | ------------------------------------- | ---------------- |
-| `insert`      | Add text content to the memory        | `content: str`   |
-| `insert_file` | Parse & add a file (PDF, image, etc.) | `file_path: str` |
-| `query`       | Retrieve relevant records             | `query: str`     |
-| `delete`      | Remove a record by ID                 | `record_id: str` |
-| `list`        | List all records in memory            | -                |
-| `info`        | Get memory metadata                   | -                |
+**Engine protocol:** `Operation` enum values match `EngineProtocol` method names. Validated at import.
 
-### View Server (Read-Only)
-
-| Tool    | Description                             | Required Params |
-| ------- | --------------------------------------- | --------------- |
-| `query` | Federated search across source memories | `query: str`    |
-| `list`  | List records across source memories     | -               |
-| `info`  | Get view metadata                       | -               |
-
-## Data Ownership
-
-RAG tools handle ingestion, indexing, and retrieval. KBM ensures portability:
-
-- If RAG tool stores in exportable format → use as source of truth
-- If RAG tool uses proprietary storage → store canonical copy in SQLite
-
-No data is ever locked in or lost due to tool changes.
+**Error handling:** Raise `KBMError` for expected user errors (shown without traceback). Any other exception is a bug (full traceback shown).

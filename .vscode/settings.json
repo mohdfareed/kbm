@@ -13,6 +13,7 @@
     "lightrag",
     "pipx",
     "pydantic",
+    "pyproject",
     "pyright",
     "pytest",
     "raganything",

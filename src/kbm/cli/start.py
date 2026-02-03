@@ -1,0 +1,35 @@
+"""Start command."""
+
+from pathlib import Path
+
+import typer
+
+from kbm.config import MemoryConfig, Transport
+from kbm.server import run_server
+
+from .app import cli_app, console
+
+
+@cli_app.command()
+def start(
+    name: str | None = typer.Argument(None, help="Memory name or omit for local."),
+    config: Path | None = typer.Option(
+        None, "-c", "--config", help="Config file path."
+    ),
+    transport: Transport | None = typer.Option(None, "-t", "--transport"),
+    host: str | None = typer.Option(None, "-H", "--host"),
+    port: int | None = typer.Option(None, "-p", "--port"),
+) -> None:
+    """Start the MCP server."""
+    cfg = MemoryConfig.load(name=name, config=config)
+
+    if transport:
+        cfg.transport = transport
+    if host:
+        cfg.host = host
+    if port:
+        cfg.port = port
+
+    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
+    console.print(f"Starting {cfg.name} [dim]({cfg.engine.value})[/dim]")
+    run_server(cfg)

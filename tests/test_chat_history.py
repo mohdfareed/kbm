@@ -1,28 +1,20 @@
 """Tests for chat history engine."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
-from app.config import ChatHistoryConfig, Settings, init_settings
-from app.config import reset_settings as set_settings
-from engines.chat_history import ChatHistoryEngine
+from kbm.engines.chat_history import ChatHistoryEngine
 
 
 @pytest.fixture
-def engine(
-    tmp_data_dir: Path, reset_settings: None, clean_env: None
-) -> ChatHistoryEngine:
+def engine(tmp_path: Path) -> ChatHistoryEngine:
     """Create a chat history engine with temp directory."""
-    set_settings(None)
-    init_settings()
-    # Override data dir for testing
-    settings = Settings(
-        data_dir=tmp_data_dir,
-        chat_history=ChatHistoryConfig(data_dir="records"),
-    )
-    set_settings(settings)
-    return ChatHistoryEngine()
+    # Mock a Config object with just the needed attribute
+    config = MagicMock()
+    config.engine_data_path = tmp_path / "chat-history"
+    return ChatHistoryEngine(config)
 
 
 class TestInsert:
@@ -31,27 +23,29 @@ class TestInsert:
     async def test_insert_text(self, engine: ChatHistoryEngine) -> None:
         """Insert text content returns confirmation message."""
         result = await engine.insert("test content")
-        assert "Inserted record:" in result
+        assert "Inserted:" in result
         # Extract ID and verify file was created
         doc_id = result.split(": ")[1]
         record_path = engine.data_dir / f"{doc_id}.json"
         assert record_path.exists()
 
+    async def test_insert_with_custom_id(self, engine: ChatHistoryEngine) -> None:
+        """Insert with custom doc_id uses that ID."""
+        result = await engine.insert("test content", doc_id="custom-id")
+        assert "custom-id" in result
+        assert (engine.data_dir / "custom-id.json").exists()
+
     async def test_insert_file(self, engine: ChatHistoryEngine, tmp_path: Path) -> None:
-        """Insert file reads content from file."""
+        """Insert file raises NotImplementedError."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("file content")
 
-        result = await engine.insert_file(str(test_file))
-        assert "test" in result  # Uses filename stem
-
-        # Verify file was stored
-        record_path = engine.data_dir / "test.json"
-        assert record_path.exists()
+        with pytest.raises(NotImplementedError):
+            await engine.insert_file(str(test_file))
 
     async def test_insert_file_not_found(self, engine: ChatHistoryEngine) -> None:
-        """Insert file raises for missing file."""
-        with pytest.raises(FileNotFoundError):
+        """Insert file raises NotImplementedError (not FileNotFoundError)."""
+        with pytest.raises(NotImplementedError):
             await engine.insert_file("/nonexistent/file.txt")
 
 
@@ -85,16 +79,16 @@ class TestDelete:
     async def test_delete_existing(self, engine: ChatHistoryEngine) -> None:
         """Delete removes existing record."""
         result = await engine.insert("test")
-        doc_id = result.split(": ")[1]
+        doc_id = result.split(": ")[1]  # "Inserted: <id>"
         assert (engine.data_dir / f"{doc_id}.json").exists()
 
         await engine.delete(doc_id)
         assert not (engine.data_dir / f"{doc_id}.json").exists()
 
     async def test_delete_nonexistent(self, engine: ChatHistoryEngine) -> None:
-        """Delete raises for missing record."""
-        with pytest.raises(ValueError, match="not found"):
-            await engine.delete("nonexistent")
+        """Delete returns message for missing record."""
+        result = await engine.delete("nonexistent")
+        assert "not found" in result.lower()
 
 
 class TestListRecords:
@@ -124,4 +118,4 @@ class TestInfo:
 
         info = await engine.info()
         assert "chat-history" in info
-        assert "Record count: 1" in info
+        assert "Records: 1" in info

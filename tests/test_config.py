@@ -1,119 +1,212 @@
-"""Tests for configuration loading and validation."""
+"""Tests for config loading."""
 
+import os
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from app.config import (
-    APP_NAME,
-    CONFIG_FILES,
-    ChatHistoryConfig,
-    Engine,
-    Settings,
-    get_settings,
-    init_settings,
-)
-from app.config import reset_settings as set_settings
+from kbm.config import Engine, MemoryConfig, Transport
 
 
-class TestSettings:
-    """Settings model tests."""
+class TestConfigValidation:
+    """Config validation tests."""
 
-    def test_default_settings(self, tmp_data_dir: Path, clean_env: None) -> None:
-        """Default settings should be valid."""
-        settings = Settings(data_dir=tmp_data_dir)
-        # Will use CHAT_HISTORY unless overridden by config file
-        assert settings.engine in [Engine.CHAT_HISTORY, Engine.RAG_ANYTHING]
-        assert settings.data_dir == tmp_data_dir
+    def test_requires_name(self, tmp_path: Path) -> None:
+        """Config requires a name field."""
+        with pytest.raises(ValidationError):
+            MemoryConfig()  # type: ignore[call-arg]
 
-    def test_engine_data_dir_relative(
-        self, tmp_data_dir: Path, clean_env: None
+    def test_requires_file_path(self, tmp_path: Path) -> None:
+        """Config requires file_path field."""
+        with pytest.raises(ValidationError):
+            MemoryConfig(name="test")  # type: ignore[call-arg]
+
+    def test_unknown_engine_rejected(self, tmp_path: Path) -> None:
+        """Config validation rejects unknown engine."""
+        with pytest.raises(ValidationError):
+            MemoryConfig(name="test", file_path=tmp_path, engine="invalid")  # type: ignore[arg-type]
+
+    def test_unknown_transport_rejected(self, tmp_path: Path) -> None:
+        """Config validation rejects unknown transport."""
+        with pytest.raises(ValidationError):
+            MemoryConfig(name="test", file_path=tmp_path, transport="invalid")  # type: ignore[arg-type]
+
+
+class TestYamlLoading:
+    """YAML config file loading tests."""
+
+    def test_loads_name_from_yaml(self, tmp_path: Path) -> None:
+        """Loads name field from YAML."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: my-memory\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.name == "my-memory"
+
+    def test_loads_engine_from_yaml(self, tmp_path: Path) -> None:
+        """Loads engine field from YAML."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\nengine: rag-anything\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.engine == Engine.RAG_ANYTHING
+
+    def test_loads_transport_from_yaml(self, tmp_path: Path) -> None:
+        """Loads transport field from YAML."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\ntransport: http\nport: 9000\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.transport == Transport.HTTP
+        assert config.port == 9000
+
+    def test_loads_nested_config(self, tmp_path: Path) -> None:
+        """Loads nested engine config from YAML."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            "name: test\nengine: rag-anything\nrag_anything:\n  embedding_dim: 1536\n"
+        )
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.rag_anything.embedding_dim == 1536
+
+    def test_default_values_applied(self, tmp_path: Path) -> None:
+        """Default values are applied when not in YAML."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.engine == Engine.CHAT_HISTORY  # default
+        assert config.transport == Transport.STDIO  # default
+        assert config.port == 8000  # default
+
+    def test_missing_yaml_file_raises(self, tmp_path: Path) -> None:
+        """Raises error for missing YAML file."""
+        with pytest.raises(Exception):
+            MemoryConfig.load(name=None, config=tmp_path / "nonexistent.yaml")
+
+    def test_empty_yaml_file_raises(self, tmp_path: Path) -> None:
+        """Empty YAML file still requires name."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("")
+
+        with pytest.raises(ValidationError):
+            MemoryConfig.load(name=None, config=config_path)
+
+    def test_ignores_extra_fields(self, tmp_path: Path) -> None:
+        """Extra fields in YAML are ignored."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\nunknown_field: value\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.name == "test"
+        assert not hasattr(config, "unknown_field")
+
+
+class TestEnvVarOverrides:
+    """Environment variable override tests."""
+
+    def test_env_overrides_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Engine data dir resolves relative to data_dir when relative path."""
-        settings = Settings(data_dir=tmp_data_dir, engine=Engine.CHAT_HISTORY)
-        # chat_history.data_dir defaults to "chat-history" (relative)
-        assert settings.engine_data_dir == tmp_data_dir / "chat-history"
+        """Environment variables override YAML values."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: from-yaml\nengine: chat-history\n")
 
-    def test_engine_data_dir_absolute(
-        self, tmp_data_dir: Path, clean_env: None
+        monkeypatch.setenv("KBM_ENGINE", "rag-anything")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.name == "from-yaml"  # from YAML
+        assert config.engine == Engine.RAG_ANYTHING  # from env
+
+    def test_nested_env_override(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Engine data dir remains unchanged when absolute path."""
-        absolute = Path("/tmp/absolute")
-        settings = Settings(
-            data_dir=tmp_data_dir,
+        """Nested config can be overridden via env."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\n")
+
+        monkeypatch.setenv("KBM_RAG_ANYTHING__EMBEDDING_DIM", "1536")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.rag_anything.embedding_dim == 1536
+
+    def test_init_overrides_env_and_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Init kwargs have highest priority."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: from-yaml\nengine: rag-anything\n")
+        monkeypatch.setenv("KBM_ENGINE", "rag-anything")
+
+        config = MemoryConfig(
+            name="from-init",
+            file_path=config_path,
             engine=Engine.CHAT_HISTORY,
-            chat_history=ChatHistoryConfig(data_dir=str(absolute)),
+            _yaml_file=config_path,  # type: ignore[call-arg]
         )
-        assert settings.engine_data_dir == absolute
+        assert config.name == "from-init"  # from init (highest)
+        assert config.engine == Engine.CHAT_HISTORY  # from init (highest)
 
-    def test_data_dir_created(self, tmp_path: Path, clean_env: None) -> None:
-        """Data directory is created on initialization."""
-        new_dir = tmp_path / "new_data_dir"
-        assert not new_dir.exists()
-        Settings(data_dir=new_dir)
-        assert new_dir.exists()
 
-    def test_engine_specific_config(self, tmp_data_dir: Path, clean_env: None) -> None:
-        """Engine-specific configs are accessible."""
-        settings = Settings(data_dir=tmp_data_dir)
-        assert settings.chat_history.data_dir == "chat-history"
-        assert settings.rag_anything.llm_model == "gpt-4o-mini"
+class TestComputedPaths:
+    """Computed path tests."""
 
-    def test_instructions_configurable(
-        self, tmp_data_dir: Path, clean_env: None
+    def test_data_path(self, tmp_config: Path, tmp_home: Path) -> None:
+        """data_path is $KBM_HOME/data/<name>/."""
+        config = MemoryConfig.load(name=None, config=tmp_config)
+        assert config.data_path == tmp_home / "data" / "test-memory"
+
+    def test_engine_data_path_chat_history(
+        self, tmp_config: Path, tmp_home: Path
     ) -> None:
-        """Server instructions can be customized."""
-        custom_instructions = "Custom instructions for the model."
-        settings = Settings(data_dir=tmp_data_dir, instructions=custom_instructions)
-        assert settings.instructions == custom_instructions
-
-
-class TestSettingsManagement:
-    """Settings singleton management tests."""
-
-    def test_get_settings_uninitialized(self, reset_settings: None) -> None:
-        """get_settings raises before init."""
-        set_settings(None)
-        with pytest.raises(RuntimeError, match="not initialized"):
-            get_settings()
-
-    def test_init_settings_default(
-        self,
-        tmp_path: Path,
-        reset_settings: None,
-        clean_env: None,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """init_settings works without config file."""
-        set_settings(None)
-        monkeypatch.chdir(tmp_path)
-        settings = init_settings()
-        assert settings is not None
-        assert get_settings() is settings
-
-    def test_init_settings_with_json(
-        self, tmp_path: Path, reset_settings: None, clean_env: None
-    ) -> None:
-        """init_settings loads specified JSON config."""
-        set_settings(None)
-        config_file = tmp_path / "config.json"
-        config_file.write_text(
-            f'{{"server_name": "custom-server", "data_dir": "{tmp_path}"}}'
+        """engine_data_path includes engine subdirectory."""
+        config = MemoryConfig.load(name=None, config=tmp_config)
+        assert (
+            config.engine_data_path
+            == tmp_home / "data" / "test-memory" / "chat-history"
         )
-        settings = init_settings(config_file)
-        assert settings.server_name == "custom-server"
-        assert settings.config_file == config_file
+
+    def test_engine_data_path_rag_anything(
+        self, tmp_path: Path, tmp_home: Path
+    ) -> None:
+        """engine_data_path changes with engine."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\nengine: rag-anything\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.engine_data_path == tmp_home / "data" / "test" / "rag-anything"
+
+    def test_engine_config_returns_correct_type(self, tmp_path: Path) -> None:
+        """engine_config returns the config for selected engine."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\nengine: rag-anything\n")
+
+        config = MemoryConfig.load(name=None, config=config_path)
+        assert config.engine_config == config.rag_anything
 
 
-class TestConfigFiles:
-    """Config file discovery tests."""
+class TestSourcePriority:
+    """Test config source priority: init > env > dotenv > yaml."""
 
-    def test_config_files_priority(self) -> None:
-        """Config files have correct priority order."""
-        assert isinstance(CONFIG_FILES, list)
-        assert CONFIG_FILES[0] == ".env"
-        assert f".{APP_NAME}" in CONFIG_FILES
-        assert f".{APP_NAME}.env" in CONFIG_FILES
-        assert f".{APP_NAME}.json" in CONFIG_FILES
-        assert f".{APP_NAME}.yaml" in CONFIG_FILES
-        assert f".{APP_NAME}.yml" in CONFIG_FILES
+    def test_priority_init_over_env_over_yaml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify full priority chain."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("name: test\nport: 1000\nhost: yaml-host\n")
+
+        monkeypatch.setenv("KBM_PORT", "2000")
+        monkeypatch.setenv("KBM_HOST", "env-host")
+
+        config = MemoryConfig(
+            name="test",
+            file_path=config_path,
+            port=3000,  # init kwarg (highest priority)
+            _yaml_file=config_path,  # type: ignore[call-arg]
+        )
+
+        assert config.port == 3000  # from init (highest)
+        assert config.host == "env-host"  # from env (middle)
+        # yaml values used only when not overridden

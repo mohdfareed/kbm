@@ -1,3 +1,0 @@
-engine: rag-anything
-server_name: knowledge-base
-data_dir: ./data

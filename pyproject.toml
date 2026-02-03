@@ -24,14 +24,14 @@ dev = [
 # MARK: - Build System
 
 [project.scripts]
-kbm = "app:cli"
+kbm = "kbm:app"
 
 [build-system]
 requires = ["uv_build>=0.9,<0.10"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = ["app", "engines"]
+module-name = ["kbm"]
 
 # MARK: - Tool Configuration
 
@@ -45,6 +45,7 @@ select = ["E", "I", "W", "RUF"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
+useLibraryCodeForTypes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
