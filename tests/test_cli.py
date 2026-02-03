@@ -132,7 +132,8 @@ class TestList:
 
         result = runner.invoke(cli_app, ["list"])
         assert result.exit_code == 0
-        assert "Local" in result.stdout
+        assert "local-test" in result.stdout
+        assert "local" in result.stdout
 
 
 class TestStatus:

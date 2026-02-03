@@ -17,17 +17,24 @@ def delete(
 ) -> None:
     """Delete a global memory."""
     cfg = MemoryConfig.load(name=name, config=None)
+    has_data = cfg.data_path.exists()
 
-    msg = f"Delete '{name}'?"
-    if cfg.data_path.exists() and not keep_data:
-        msg += f" This will also delete: {cfg.data_path}"
+    # Confirmation message
+    if has_data and not keep_data:
+        msg = f"Delete [bold]{name}[/bold] and all its data?"
+    elif has_data:
+        msg = f"Delete [bold]{name}[/bold] config? [dim](data will be kept)[/dim]"
+    else:
+        msg = f"Delete [bold]{name}[/bold]?"
 
-    if not yes and not typer.confirm(msg):
-        raise typer.Abort()
+    if not yes:
+        console.print(msg)
+        if not typer.confirm("Continue?", default=False):
+            raise typer.Abort()
 
     cfg.file_path.unlink()
-    console.print(f"Deleted {cfg.file_path}")
+    console.print(f"[green]✓[/green] Deleted config: {cfg.file_path}")
 
-    if cfg.data_path.exists() and not keep_data:
+    if has_data and not keep_data:
         shutil.rmtree(cfg.data_path)
-        console.print(f"Deleted {cfg.data_path}")
+        console.print(f"[green]✓[/green] Deleted data: {cfg.data_path}")

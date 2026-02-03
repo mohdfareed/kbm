@@ -17,34 +17,42 @@ cli_app = typer.Typer(
 )
 
 
-@cli_app.callback()
-def callback(
-    debug: bool = typer.Option(False, "-d", "--debug", help="Debug logging."),
-    version: bool = typer.Option(False, "-v", "--version", help="Show version."),
-) -> None:
-    if version:
+def _version_callback(value: bool) -> None:
+    if value:
         console.print(f"{app_metadata.name} {app_metadata.version}")
         raise typer.Exit()
 
+
+@cli_app.callback()
+def callback(
+    debug: bool = typer.Option(False, "-d", "--debug", help="Debug logging."),
+    version: bool = typer.Option(
+        False,
+        "-v",
+        "--version",
+        help="Show version.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
     if debug:
         logging.root.setLevel(logging.DEBUG)
-        logging.root.addHandler(RichHandler(console=console))
+    logging.root.addHandler(RichHandler(console=console))
 
 
 def main(prog_name: str | None = None) -> None:
     """Entry point."""
     try:
         cli_app(prog_name=prog_name)
-    except (typer.Exit, typer.Abort):
-        raise
+        raise typer.Exit(code=0)
 
-    # Error handling
+    # Handle exceptions
     except Exception as e:
         if logging.root.level == logging.DEBUG:
             console.print_exception()
         else:
             console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise SystemExit(1) from None
 
 
 # Register commands

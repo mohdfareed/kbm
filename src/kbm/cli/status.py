@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import typer
+from rich.syntax import Syntax
 
 from kbm.config import MemoryConfig
 
@@ -22,8 +23,10 @@ def status(
     """Show memory configuration."""
     cfg = MemoryConfig.load(name=name, config=config)
 
-    console.print(f"[bold]{cfg.name}[/bold] ({cfg.engine.value})")
-    console.print(f"  Config: {cfg.file_path}")
-    console.print(f"  Data:   {cfg.data_path}")
+    console.print(f"[bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]")
+    console.print(f"[dim]Config:[/dim] {cfg.file_path}")
+    console.print(f"[dim]Data:[/dim]   {cfg.data_path}")
     console.print()
-    console.print(cfg.dump(full=full).rstrip())
+    console.print(
+        Syntax(cfg.dump(full=full).rstrip(), "yaml", background_color="default")
+    )

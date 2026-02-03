@@ -19,10 +19,11 @@ def init(
 ) -> None:
     """Create a new memory."""
     memory_name = name or Path.cwd().name
+    is_local = name is None
     config_path = (
-        app_metadata.named_config_path(name)
-        if name
-        else app_metadata.local_config_path()
+        app_metadata.local_config_path()
+        if is_local
+        else app_metadata.named_config_path(name)
     )
 
     if config_path.exists() and not force:
@@ -32,4 +33,8 @@ def init(
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(config.dump())
     config.data_path.mkdir(parents=True, exist_ok=True)
-    console.print(f"Created {config_path}")
+
+    location = "local" if is_local else "global"
+    console.print(f"[green]✓[/green] Created [bold]{memory_name}[/bold] ({location})")
+    console.print(f"  [dim]Config:[/dim] {config_path}")
+    console.print(f"  [dim]Data:[/dim]   {config.data_path}")

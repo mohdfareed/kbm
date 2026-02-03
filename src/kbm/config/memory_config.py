@@ -102,12 +102,26 @@ class MemoryConfig(BaseSettings):
     def dump(self, full: bool = False) -> str:
         """Serialize config to YAML. If full=False, excludes defaults."""
         data = self.model_dump(
-            mode="json",  # Serialize enums as their values
+            mode="json",
             exclude=self.EXCLUDE_FIELDS,
             exclude_computed_fields=True,
             exclude_defaults=not full,
         )
-        return yaml.dump(data, default_flow_style=False, sort_keys=False)
+        # Strip multi-line strings for cleaner output
+        for key, value in data.items():
+            if isinstance(value, str) and "\n" in value:
+                data[key] = value.strip()
+
+        # Custom dumper for literal block style on multi-line strings
+        class Dumper(yaml.SafeDumper):
+            pass
+
+        def str_representer(dumper: Dumper, data: str) -> yaml.Node:
+            style = "|" if "\n" in data else None
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
+
+        Dumper.add_representer(str, str_representer)
+        return yaml.dump(data, Dumper=Dumper, default_flow_style=False, sort_keys=False)
 
     @classmethod
     def settings_customise_sources(

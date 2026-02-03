@@ -22,6 +22,7 @@ def start(
 ) -> None:
     """Start the MCP server."""
     cfg = MemoryConfig.load(name=name, config=config)
+    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
 
     if transport:
         cfg.transport = transport
@@ -30,6 +31,10 @@ def start(
     if port:
         cfg.port = port
 
-    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
-    console.print(f"Starting {cfg.name} [dim]({cfg.engine.value})[/dim]")
+    engine_text = f"• {cfg.engine.value} • {cfg.transport.value}"
+    console.print(f"[bold]{cfg.name}[/bold] [dim]{engine_text}[/dim]")
+    if cfg.transport == Transport.HTTP:
+        console.print(f"[dim]Listening on[/dim] http://{cfg.host}:{cfg.port}")
+    console.print()
+
     run_server(cfg)

@@ -1,7 +1,5 @@
 """List command."""
 
-from distro import name
-
 from kbm.config import MemoryConfig, app_metadata
 
 from .app import cli_app, console
@@ -12,25 +10,35 @@ def list_memories() -> None:
     """List all memories."""
     found = False
 
-    # Local
+    # Local memory
     try:
         cfg = MemoryConfig.load(name=None, config=None)
-        console.print(f"[bold]Local:[/bold] {cfg.name} [dim]({cfg.engine.value})[/dim]")
+        has_data = cfg.data_path.exists()
+        icon = "[green]●[/green]" if has_data else "[yellow]○[/yellow]"
+        console.print(
+            f"{icon} [bold]{cfg.name}[/bold] [dim]• local • {cfg.engine.value}[/dim]"
+        )
         found = True
     except Exception:
         pass
 
-    # Global
+    # Global memories
     if app_metadata.memories_path.exists():
         for path in sorted(app_metadata.memories_path.glob("*.yaml")):
             try:
                 cfg = MemoryConfig.load(name=path.stem, config=None)
-                marker = "✓" if cfg.data_path.exists() else "○"
-
-                console.print(f"  {marker} {cfg.name:20} [dim]{cfg.engine.value}[/dim]")
+                has_data = cfg.data_path.exists()
+                icon = "[green]●[/green]" if has_data else "[yellow]○[/yellow]"
+                console.print(
+                    f"{icon} [bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]"
+                )
                 found = True
             except Exception:
-                console.print(f"  ✗ {path.stem:20} [red]invalid[/red]")
+                console.print(
+                    f"[red]✗[/red] [bold]{path.stem}[/bold] [red]• invalid config[/red]"
+                )
+                found = True
 
     if not found:
-        console.print("No memories found. Run: kbm init [name]")
+        console.print("No memories found.")
+        console.print("Use [bold]kbm init[/bold] to create a new memory.")

@@ -7,9 +7,11 @@ from functools import cached_property
 from importlib.metadata import metadata
 from pathlib import Path
 
+import dotenv
 import typer
 from pydantic import BaseModel
 
+_KBM_HOME = "KBM_HOME"
 _meta = metadata("kbm")
 
 
@@ -22,8 +24,17 @@ class _AppMetadata(BaseModel):
 
     @cached_property
     def home(self) -> Path:
-        """KBM home directory ($KBM_HOME or platform default)."""
-        if env := os.environ.get("KBM_HOME"):
+        """KBM home directory ($KBM_HOME or platform default).
+
+        Priority: .kbm.env > .env > environment variable > platform default.
+        """
+        env = (
+            dotenv.dotenv_values(".kbm.env").get(_KBM_HOME)
+            or dotenv.dotenv_values(".env").get(_KBM_HOME)
+            or os.environ.get(_KBM_HOME)
+        )
+
+        if env:
             return Path(env).expanduser().resolve()
         return Path(typer.get_app_dir(self.name))
 
