@@ -2,6 +2,7 @@
 
 __all__ = ["MemoryConfig", "Transport"]
 
+import json
 from enum import Enum
 from pathlib import Path
 from typing import ClassVar, cast
@@ -61,6 +62,8 @@ class MemoryConfig(BaseSettings):
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
 
+    # MARK: Computed Properties
+
     @computed_field
     @property
     def data_path(self) -> Path:
@@ -80,48 +83,62 @@ class MemoryConfig(BaseSettings):
             case Engine.RAG_ANYTHING:
                 return self.rag_anything
 
+    @computed_field
+    @property
+    def is_global(self) -> bool:
+        return self.file_path.parent == app_metadata.memories_path
+
     # MARK: Configuration Management
 
     @classmethod
     def load(cls, name: str | None, config: Path | None) -> "MemoryConfig":
-        """Load config from a YAML file."""
+        """Load config from a config file."""
         if name and config:
             raise ValueError("Cannot specify both name and config.")
 
-        if config:
-            path = config.expanduser().resolve()
-        elif name:
-            path = app_metadata.named_config_path(name)
-        else:
-            path = app_metadata.local_config_path()
+        path = (
+            config.expanduser().resolve()
+            if config
+            else app_metadata.named_config_path(name)
+            if name
+            else app_metadata.local_config_path()
+        )
 
         if not path.exists():
             raise FileNotFoundError(f"Config not found: {path}")
-        return cls(file_path=path, _yaml_file=path)  # type: ignore[call-arg]
 
-    def dump(self, full: bool = False) -> str:
-        """Serialize config to YAML. If full=False, excludes defaults."""
-        data = self.model_dump(
-            mode="json",
-            exclude=self.EXCLUDE_FIELDS,
+        return cls(
+            file_path=path,
+            **{"name": name} if name else {},  # Only pass name if provided
+            _yaml_file=path,  # type: ignore[call-arg]
+            _json_file=path.with_suffix(".json"),  # type: ignore[call-arg]
+        )
+
+    def dump(self, full: bool = False) -> dict:
+        """Serialize config to a dictionary."""
+        exclude = self.EXCLUDE_FIELDS.copy()
+        if self.is_global:
+            exclude.add("name")
+
+        return self.model_dump(
+            exclude=exclude,
             exclude_computed_fields=True,
             exclude_defaults=not full,
         )
-        # Strip multi-line strings for cleaner output
-        for key, value in data.items():
-            if isinstance(value, str) and "\n" in value:
-                data[key] = value.strip()
 
-        # Custom dumper for literal block style on multi-line strings
-        class Dumper(yaml.SafeDumper):
-            pass
+    def dump_json(self, full: bool = False) -> str:
+        """Serialize config to JSON."""
+        return json.dumps(
+            self.dump(full=full),
+            indent=2,
+        )
 
-        def str_representer(dumper: Dumper, data: str) -> yaml.Node:
-            style = "|" if "\n" in data else None
-            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=style)
-
-        Dumper.add_representer(str, str_representer)
-        return yaml.dump(data, Dumper=Dumper, default_flow_style=False, sort_keys=False)
+    def dump_yaml(self, full: bool = False) -> str:
+        """Serialize config to YAML."""
+        return yaml.dump(
+            self.dump(full=full),
+            sort_keys=False,
+        )
 
     @classmethod
     def settings_customise_sources(
@@ -133,15 +150,15 @@ class MemoryConfig(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         init_src = cast(InitSettingsSource, init_settings)
-        yaml_file: Path | None = init_src.init_kwargs.get("_yaml_file")
-        json_file: Path | None = init_src.init_kwargs.get("_json_file")
+        yaml_file: Path | None = init_src.init_kwargs.pop("_yaml_file", None)
+        json_file: Path | None = init_src.init_kwargs.pop("_json_file", None)
 
         # Priority: init > env > dotenv > config files > secrets
         return (
             init_settings,
             env_settings,
             dotenv_settings,
-            YamlConfigSettingsSource(settings_cls, yaml_file),
-            JsonConfigSettingsSource(settings_cls, json_file),
+            YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file),
+            JsonConfigSettingsSource(settings_cls, json_file=json_file),
             file_secret_settings,
         )

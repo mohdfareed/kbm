@@ -10,7 +10,7 @@ from kbm.engines import get_engine
 
 def run_server(config: MemoryConfig) -> None:
     """Run the MCP server."""
-    mcp = FastMCP(config.name, instructions=config.instructions)
+    mcp = FastMCP(name=config.name, instructions=config.instructions)
     engine = get_engine(config)
 
     for op in engine.supported_operations:

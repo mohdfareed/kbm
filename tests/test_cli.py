@@ -33,7 +33,8 @@ class TestInit:
         assert result.exit_code == 0
         config_path = tmp_home / "memories" / "test-memory.yaml"
         assert config_path.exists()
-        assert "name: test-memory" in config_path.read_text()
+        # Global configs don't include name (inferred from filename)
+        assert "name:" not in config_path.read_text()
 
     def test_creates_data_directory(self, tmp_home: Path) -> None:
         """Creates data directory in $KBM_HOME/data/."""

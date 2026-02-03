@@ -20,7 +20,7 @@ cli_app = typer.Typer(
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"{app_metadata.name} {app_metadata.version}")
-        raise typer.Exit()
+        raise typer.Exit(code=0)
 
 
 @cli_app.callback()
@@ -44,9 +44,9 @@ def main(prog_name: str | None = None) -> None:
     """Entry point."""
     try:
         cli_app(prog_name=prog_name)
-        raise typer.Exit(code=0)
-
-    # Handle exceptions
+    except typer.Abort:
+        console.print("[dim]Aborted.[/dim]")
+        raise SystemExit(1) from None
     except Exception as e:
         if logging.root.level == logging.DEBUG:
             console.print_exception()

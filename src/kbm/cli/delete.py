@@ -29,8 +29,7 @@ def delete(
 
     if not yes:
         console.print(msg)
-        if not typer.confirm("Continue?", default=False):
-            raise typer.Abort()
+        typer.confirm("Continue?", default=False, abort=True)
 
     cfg.file_path.unlink()
     console.print(f"[green]✓[/green] Deleted config: {cfg.file_path}")

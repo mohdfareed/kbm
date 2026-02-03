@@ -20,11 +20,17 @@ def list_memories() -> None:
         )
         found = True
     except Exception:
-        pass
+        console.print(f"[dim]No local memory found.[/dim]")
 
     # Global memories
     if app_metadata.memories_path.exists():
-        for path in sorted(app_metadata.memories_path.glob("*.yaml")):
+        config_files = sorted(
+            f
+            for f in app_metadata.memories_path.iterdir()
+            if f.suffix in {".json", ".yaml", ".yml"}
+        )
+
+        for path in config_files:
             try:
                 cfg = MemoryConfig.load(name=path.stem, config=None)
                 has_data = cfg.data_path.exists()
@@ -33,6 +39,7 @@ def list_memories() -> None:
                     f"{icon} [bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]"
                 )
                 found = True
+
             except Exception:
                 console.print(
                     f"[red]✗[/red] [bold]{path.stem}[/bold] [red]• invalid config[/red]"
