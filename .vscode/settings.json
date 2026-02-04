@@ -6,6 +6,7 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "cSpell.words": [
+    "aiosqlite",
     "asyncio",
     "customise",
     "dotenv",
@@ -17,6 +18,7 @@
     "pyright",
     "pytest",
     "raganything",
+    "sqlalchemy",
     "streamable",
     "typer",
     "venv"

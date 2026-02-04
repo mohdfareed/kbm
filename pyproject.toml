@@ -12,6 +12,8 @@ dependencies = [
     "typer>=0.21",
     "pydantic-settings>=2.12",
     "raganything[all]>=1.2",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.22",
 ]
 
 [dependency-groups]

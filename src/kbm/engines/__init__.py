@@ -4,6 +4,7 @@ __all__ = ["get_engine"]
 
 from typing import TYPE_CHECKING
 
+from kbm.canonical import with_canonical
 from kbm.config import Engine
 from kbm.engine import EngineProtocol
 
@@ -12,13 +13,16 @@ if TYPE_CHECKING:
 
 
 def get_engine(config: "MemoryConfig") -> EngineProtocol:
-    """Get engine instance for config."""
+    """Get engine instance for config, wrapped with canonical storage."""
     match config.engine:
         case Engine.CHAT_HISTORY:
             from kbm.engines.chat_history import ChatHistoryEngine
 
-            return ChatHistoryEngine(config)
+            engine = ChatHistoryEngine(config)
         case Engine.RAG_ANYTHING:
             from kbm.engines.rag_anything import RAGAnythingEngine
 
-            return RAGAnythingEngine(config)
+            engine = RAGAnythingEngine(config)
+
+    # Wrap with canonical storage for durability
+    return with_canonical(config, engine)

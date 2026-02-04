@@ -8,6 +8,7 @@ from pydantic import computed_field
 from .app_config import AppConfig
 from .app_settings import app_settings
 from .engine_config import (
+    CanonicalConfig,
     ChatHistoryConfig,
     Engine,
     EngineConfig,
@@ -41,6 +42,7 @@ class MemoryConfig(AppConfig):
 
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
+    canonical: CanonicalConfig = CanonicalConfig()
 
     # MARK: Computed Properties
 
@@ -67,6 +69,15 @@ class MemoryConfig(AppConfig):
     @property
     def engine_data_path(self) -> Path:
         return self.data_path / self.engine.value
+
+    @computed_field
+    @property
+    def canonical_url(self) -> str:
+        """Database URL for canonical storage."""
+        if self.canonical.database_url:
+            return self.canonical.database_url
+        db_path = self.data_path / "canonical.db"
+        return f"sqlite+aiosqlite:///{db_path}"
 
     # MARK: Name Resolution
 

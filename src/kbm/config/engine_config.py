@@ -41,3 +41,13 @@ class RAGAnythingConfig(EngineConfig):
     enable_image_processing: bool = True
     enable_table_processing: bool = True
     enable_equation_processing: bool = True
+
+
+class CanonicalConfig(EngineConfig):
+    """Canonical storage configuration."""
+
+    # Database URL (defaults to SQLite, can be PostgreSQL, MySQL, etc.)
+    # Examples:
+    #   sqlite+aiosqlite:///path/to/db.sqlite
+    #   postgresql+asyncpg://user:pass@host/db
+    database_url: str | None = None
