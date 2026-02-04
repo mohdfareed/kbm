@@ -8,15 +8,6 @@
         ".kbm.yaml",
         "start",
       ]
-    },
-    "kbm-dev": {
-      "type": "stdio",
-      "command": "./scripts/run.sh",
-      "args": [
-        "--config",
-        ".env",
-        "start",
-      ]
     }
   },
   "inputs": []

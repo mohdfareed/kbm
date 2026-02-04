@@ -82,5 +82,7 @@ def main(prog_name: str | None = None) -> None:
         sys.exit(1)
 
 
-# Register commands
-from kbm.cli import delete, init, list, start, status  # noqa: E402
+# Register commands (order determines help display)
+# isort: off
+from kbm.cli import init, start, status, list, delete  # noqa: E402
+# isort: on
