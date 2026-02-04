@@ -8,12 +8,12 @@ readme = "README.md"
 
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=3.0.0b1",
     "typer>=0.21",
     "pydantic-settings>=2.12",
-    "raganything[all]>=1.2",
     "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.22",
+    "fastmcp>=3.0.0b1", # REVIEW: Upgrade when stable release is available
+    "raganything[all]", # Use latest stable release
 ]
 
 [dependency-groups]

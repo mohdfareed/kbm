@@ -1538,7 +1538,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.22" },
     { name = "fastmcp", specifier = ">=3.0.0b1" },
     { name = "pydantic-settings", specifier = ">=2.12" },
-    { name = "raganything", extras = ["all"], specifier = ">=1.2" },
+    { name = "raganything", extras = ["all"] },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
     { name = "typer", specifier = ">=0.21" },
 ]
