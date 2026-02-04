@@ -8,14 +8,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from kbm.engine import EngineProtocol, Operation
+from kbm.models import (
+    DeleteResponse,
+    InfoResponse,
+    InsertResponse,
+    ListResponse,
+    QueryResponse,
+    QueryResult,
+)
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
 
 
 class FederationEngine(EngineProtocol):
-    """Queries multiple sources and combines results."""
-
     logger = logging.getLogger(__name__)
 
     def __init__(self, config: "MemoryConfig") -> None:
@@ -50,45 +56,59 @@ class FederationEngine(EngineProtocol):
     def supported_operations(self) -> frozenset[Operation]:
         return frozenset({Operation.INFO, Operation.QUERY})
 
-    async def info(self) -> str:
-        """Get info from all federated sources."""
-        lines = [f"Engine: federation ({len(self._sources)} sources)"]
+    async def info(self) -> InfoResponse:
+        total_records = 0
+        metadata: dict[str, str] = {}
+
         for name, engine in self._sources:
             self.logger.debug(f"Fetching info from federated source: {name}")
-
             try:
                 info = await engine.info()
-                lines.append(f"\n[{name}]\n{info}")
+                total_records += info.records
+                metadata[name] = f"{info.engine} ({info.records} records)"
             except Exception as e:
                 self.logger.error(f"Error fetching info from {name}: {e}")
-                lines.append(f"\n[{name}] Failed to retrieve info.")
+                metadata[name] = "error"
 
-        return "\n".join(lines)
+        return InfoResponse(
+            engine="federation",
+            records=total_records,
+            metadata=metadata,
+        )
 
-    async def query(self, query: str, top_k: int = 10) -> str:
-        """Query all sources and combine results."""
+    async def query(self, query: str, top_k: int = 10) -> QueryResponse:
         self.logger.debug(f"Querying federated sources with query: {query}")
         tasks = [engine.query(query, top_k) for _, engine in self._sources]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        lines = []
+        all_results: list[QueryResult] = []
         for (name, _), result in zip(self._sources, results):
             if isinstance(result, BaseException):
                 self.logger.error(f"Error querying {name}: {result}")
-                lines.append(f"[{name}] Failed to query.")
-            elif "No matching" not in result and result.strip():
-                lines.append(f"[{name}]\n{result}")
+            elif isinstance(result, QueryResponse):
+                # Prefix IDs with source name for disambiguation
+                for r in result.results:
+                    all_results.append(
+                        QueryResult(
+                            id=f"{name}:{r.id}",
+                            content=r.content,
+                            created_at=r.created_at,
+                            score=r.score,
+                        )
+                    )
 
-        return "\n\n".join(lines) if lines else "No matching records found."
+        return QueryResponse(results=all_results, query=query, total=len(all_results))
 
-    async def insert(self, content: str, doc_id: str | None = None) -> str:
+    async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
         raise NotImplementedError("Federation is read-only")
 
-    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
+    async def insert_file(
+        self, file_path: str, doc_id: str | None = None
+    ) -> InsertResponse:
         raise NotImplementedError("Federation is read-only")
 
-    async def delete(self, record_id: str) -> str:
+    async def delete(self, record_id: str) -> DeleteResponse:
         raise NotImplementedError("Federation is read-only")
 
-    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
+    async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
         raise NotImplementedError("Federation is read-only")

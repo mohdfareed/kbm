@@ -29,26 +29,29 @@ class TestInsert:
     """Insert operation tests."""
 
     async def test_insert_text(self, engine: EngineProtocol) -> None:
-        """Insert text content returns confirmation message."""
+        """Insert text content returns confirmation with ID."""
         result = await engine.insert("test content")
-        assert "Inserted:" in result
+        assert result.id
+        assert result.message == "Inserted"
 
     async def test_insert_with_custom_id(self, engine: EngineProtocol) -> None:
         """Insert with custom doc_id uses that ID."""
         result = await engine.insert("test content", doc_id="custom-id")
-        assert "custom-id" in result
+        assert result.id == "custom-id"
 
     async def test_insert_file(self, engine: EngineProtocol, tmp_path: Path) -> None:
         """Insert file stores reference in canonical."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("file content")
         result = await engine.insert_file(str(test_file))
-        assert "Stored:" in result
+        assert result.id
+        assert result.message == "Stored"
 
     async def test_insert_file_not_found(self, engine: EngineProtocol) -> None:
         """Insert file for missing file still stores reference."""
         result = await engine.insert_file("/nonexistent/file.txt")
-        assert "Stored:" in result
+        assert result.id
+        assert result.message == "Stored"
 
 
 class TestQuery:
@@ -60,19 +63,20 @@ class TestQuery:
         await engine.insert("goodbye world")
 
         result = await engine.query("hello")
-        assert "hello world" in result
+        assert any("hello world" in r.content for r in result.results)
 
     async def test_query_case_insensitive(self, engine: EngineProtocol) -> None:
         """Query finds via substring match."""
         await engine.insert("Hello World")
         result = await engine.query("Hello")
-        assert "Hello World" in result
+        assert any("Hello World" in r.content for r in result.results)
 
     async def test_query_no_matches(self, engine: EngineProtocol) -> None:
-        """Query returns message when no matches."""
+        """Query returns empty results when no matches."""
         await engine.insert("hello world")
         result = await engine.query("nonexistent")
-        assert "No matching records" in result
+        assert result.total == 0
+        assert len(result.results) == 0
 
 
 class TestDelete:
@@ -80,17 +84,18 @@ class TestDelete:
 
     async def test_delete_existing(self, engine: EngineProtocol) -> None:
         """Delete removes existing record."""
-        result = await engine.insert("test", doc_id="to-delete")
-        await engine.delete("to-delete")
+        await engine.insert("test", doc_id="to-delete")
+        delete_result = await engine.delete("to-delete")
+        assert delete_result.found is True
 
         # Should not find it anymore
         result = await engine.query("test")
-        assert "No matching" in result
+        assert result.total == 0
 
     async def test_delete_nonexistent(self, engine: EngineProtocol) -> None:
-        """Delete returns message for missing record."""
+        """Delete returns found=False for missing record."""
         result = await engine.delete("nonexistent")
-        assert "not found" in result.lower()
+        assert result.found is False
 
 
 class TestListRecords:
@@ -102,21 +107,23 @@ class TestListRecords:
         await engine.insert("content two")
 
         result = await engine.list_records()
-        assert result.count("[") == 2  # Two records listed
+        assert len(result.records) == 2
+        assert result.total == 2
 
     async def test_list_empty(self, engine: EngineProtocol) -> None:
-        """List returns message when empty."""
+        """List returns empty when no records."""
         result = await engine.list_records()
-        assert "No records found" in result
+        assert len(result.records) == 0
+        assert result.total == 0
 
 
 class TestInfo:
     """Info operation tests."""
 
     async def test_info_returns_metadata(self, engine: EngineProtocol) -> None:
-        """Info returns engine metadata as string."""
+        """Info returns structured engine metadata."""
         await engine.insert("test")
 
         info = await engine.info()
-        assert "chat-history" in info
-        assert "Records: 1" in info
+        assert info.engine == "chat-history"
+        assert info.records == 1

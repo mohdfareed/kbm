@@ -7,14 +7,20 @@ from typing import TYPE_CHECKING
 
 from kbm.canonical import CanonicalStore
 from kbm.engine import EngineProtocol, Operation
+from kbm.models import (
+    DeleteResponse,
+    InfoResponse,
+    InsertResponse,
+    ListResponse,
+    QueryResponse,
+    QueryResult,
+)
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
 
 
 class ChatHistoryEngine(EngineProtocol):
-    """Simple text search. Storage handled by canonical layer."""
-
     logger = logging.getLogger(__name__)
 
     def __init__(self, config: "MemoryConfig") -> None:
@@ -25,37 +31,30 @@ class ChatHistoryEngine(EngineProtocol):
     def supported_operations(self) -> frozenset[Operation]:
         return frozenset({Operation.INFO, Operation.QUERY})
 
-    async def info(self) -> str:
-        """Get information about the knowledge base."""
+    async def info(self) -> InfoResponse:
         self.logger.debug("Fetching chat history info...")
         count = await self._store.count_records()
-        return f"Engine: chat-history\nRecords: {count}"
+        return InfoResponse(engine="chat-history", records=count)
 
-    async def query(self, query: str, top_k: int = 10) -> str:
-        """Search the knowledge base for relevant information."""
+    async def query(self, query: str, top_k: int = 10) -> QueryResponse:
         self.logger.debug(f"Searching chat history with query: {query}")
         records = await self._store.search_records(query, top_k)
-        if not records:
-            return "No matching records found."
+        results = [
+            QueryResult(id=r.id, content=r.content, created_at=r.created_at)
+            for r in records
+        ]
+        return QueryResponse(results=results, query=query, total=len(results))
 
-        lines = []
-        for r in records:
-            preview = r.content[:200] + "..." if len(r.content) > 200 else r.content
-            lines.append(f"[{r.id}] {r.created_at.isoformat()}\n{preview}")
-        return "\n\n".join(lines)
-
-    async def insert(self, content: str, doc_id: str | None = None) -> str:
-        """Handled by canonical layer."""
+    async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
         raise NotImplementedError("Handled by canonical layer.")
 
-    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
-        """Handled by canonical layer."""
+    async def insert_file(
+        self, file_path: str, doc_id: str | None = None
+    ) -> InsertResponse:
         raise NotImplementedError("Handled by canonical layer.")
 
-    async def delete(self, record_id: str) -> str:
-        """Handled by canonical layer."""
+    async def delete(self, record_id: str) -> DeleteResponse:
         raise NotImplementedError("Handled by canonical layer.")
 
-    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
-        """Handled by canonical layer."""
+    async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
         raise NotImplementedError("Handled by canonical layer.")

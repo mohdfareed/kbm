@@ -4,6 +4,7 @@ __all__ = ["RAGAnythingEngine"]
 
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,14 +14,20 @@ from lightrag.utils import EmbeddingFunc
 from raganything import RAGAnything, RAGAnythingConfig
 
 from kbm.engine import EngineProtocol, Operation
+from kbm.models import (
+    DeleteResponse,
+    InfoResponse,
+    InsertResponse,
+    ListResponse,
+    QueryResponse,
+    QueryResult,
+)
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
 
 
 class RAGAnythingEngine(EngineProtocol):
-    """Knowledge graph RAG. Does not support delete/list_records."""
-
     logger = logging.getLogger(__name__)
 
     def __init__(self, config: "MemoryConfig") -> None:
@@ -44,46 +51,63 @@ class RAGAnythingEngine(EngineProtocol):
             {Operation.INFO, Operation.QUERY, Operation.INSERT, Operation.INSERT_FILE}
         )
 
-    async def info(self) -> str:
-        """Get information about the knowledge base."""
-        return (
-            f"Engine: rag-anything\n"
-            f"LLM: {self.config.llm_model}\n"
-            f"Mode: {self.config.query_mode}"
+    async def info(self) -> InfoResponse:
+        return InfoResponse(
+            engine="rag-anything",
+            records=-1,  # Not tracked
+            metadata={
+                "embedding_model": self.config.embedding_model,
+                "llm_model": self.config.llm_model,
+                "query_mode": self.config.query_mode,
+                "image_processing": str(self.config.enable_image_processing),
+                "table_processing": str(self.config.enable_table_processing),
+                "equation_processing": str(self.config.enable_equation_processing),
+            },
         )
 
-    async def query(self, query: str, top_k: int = 10) -> str:
-        """Search the knowledge base for relevant information."""
+    async def query(self, query: str, top_k: int = 10) -> QueryResponse:
         rag = self._get_rag(await self._get_lightrag())
-        return await rag.aquery(query, mode=self.config.query_mode)
+        result = await rag.aquery_vlm_enhanced(query, mode=self.config.query_mode)
 
-    async def insert(self, content: str, doc_id: str | None = None) -> str:
-        """Insert text content into the knowledge base."""
+        return QueryResponse(
+            results=[
+                QueryResult(id="rag", content=str(result), created_at=datetime.now())
+            ]
+            if result
+            else [],
+            query=query,
+            total=1 if result else 0,
+        )
+
+    async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
+        """Insert text content into the knowledge base. Document ID is"""
         rag = self._get_rag(await self._get_lightrag())
         await rag.insert_content_list(
             content_list=[{"type": "text", "text": content, "page_idx": 0}],
             file_path="text_insert.txt",
             doc_id=doc_id,
         )
-        return "Inserted into knowledge graph."
+        return InsertResponse(
+            id=doc_id or "text", message="Inserted into knowledge graph"
+        )
 
-    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
-        """Insert a file into the knowledge base (PDF, image, etc.)."""
+    async def insert_file(
+        self, file_path: str, doc_id: str | None = None
+    ) -> InsertResponse:
         path = Path(file_path).expanduser().resolve()
         if not path.is_file():
             raise FileNotFoundError(f"File not found: {file_path}")
+
         rag = self._get_rag(await self._get_lightrag())
         await rag.process_document_complete(
             file_path=str(path), output_dir=str(self.working_dir / "output")
         )
-        return f"Ingested: {path.name}"
+        return InsertResponse(id=doc_id or path.name, message=f"Ingested: {path.name}")
 
-    async def delete(self, record_id: str) -> str:
-        """Not supported by this engine."""
+    async def delete(self, record_id: str) -> DeleteResponse:
         raise NotImplementedError("RAG-Anything does not support delete.")
 
-    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
-        """Not supported by this engine."""
+    async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
         raise NotImplementedError("RAG-Anything does not support list.")
 
     # --- Internal ---

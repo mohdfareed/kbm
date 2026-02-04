@@ -1,12 +1,19 @@
 {
   "servers": {
-    "memories": {
+    "kbm-memories": {
       "type": "stdio",
       "command": "./scripts/run.sh",
       "args": [
-        "--config",
-        ".kbm.yaml",
         "start",
+        "kbm"
+      ]
+    },
+    "kbm-dev": {
+      "type": "stdio",
+      "command": "./scripts/run.sh",
+      "args": [
+        "start",
+        "kbm-dev"
       ]
     }
   },

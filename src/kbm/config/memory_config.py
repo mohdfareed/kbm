@@ -11,7 +11,6 @@ from .engine_config import (
     CanonicalConfig,
     ChatHistoryConfig,
     Engine,
-    EngineConfig,
     FederationConfig,
     RAGAnythingConfig,
 )

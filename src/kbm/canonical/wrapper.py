@@ -8,6 +8,14 @@ from typing import TYPE_CHECKING
 
 from kbm.canonical.store import CanonicalStore
 from kbm.engine import EngineProtocol, Operation
+from kbm.models import (
+    DeleteResponse,
+    InfoResponse,
+    InsertResponse,
+    ListResponse,
+    QueryResponse,
+    RecordSummary,
+)
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
@@ -38,23 +46,23 @@ class CanonicalEngineWrapper(EngineProtocol):
         }
         return self._engine_ops | canonical_ops
 
-    async def info(self) -> str:
+    async def info(self) -> InfoResponse:
         """Get info from engine."""
         try:
             return await self._engine.info()
         except Exception as e:
             self._logger.error(f"Error getting engine info: {e}")
-            return "Engine info not available."
+            return InfoResponse(engine="unknown", records=0)
 
-    async def query(self, query: str, top_k: int = 10) -> str:
+    async def query(self, query: str, top_k: int = 10) -> QueryResponse:
         """Query the underlying engine."""
         try:
             return await self._engine.query(query, top_k)
         except Exception as e:
             self._logger.error(f"Error querying engine: {e}")
-            return "Query failed."
+            return QueryResponse(results=[], query=query, total=0)
 
-    async def insert(self, content: str, doc_id: str | None = None) -> str:
+    async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
         """Insert to canonical, then to engine if supported."""
         rid = await self._store.insert_record(content, doc_id)
         if Operation.INSERT in self._engine_ops:
@@ -62,9 +70,11 @@ class CanonicalEngineWrapper(EngineProtocol):
                 await self._engine.insert(content, rid)
             except Exception as e:
                 self._logger.error(f"Error inserting into engine: {e}")
-        return f"Inserted: {rid}"
+        return InsertResponse(id=rid)
 
-    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
+    async def insert_file(
+        self, file_path: str, doc_id: str | None = None
+    ) -> InsertResponse:
         """Store file in canonical, delegate to engine if supported."""
         path = Path(file_path).expanduser().resolve()
         rid = await self._store.insert_record(
@@ -84,12 +94,12 @@ class CanonicalEngineWrapper(EngineProtocol):
 
         if Operation.INSERT_FILE in self._engine_ops:
             try:
-                return await self._engine.insert_file(file_path, rid)
+                await self._engine.insert_file(file_path, rid)
             except Exception as e:
                 self._logger.error(f"Error inserting file into engine: {e}")
-        return f"Stored: {rid}"
+        return InsertResponse(id=rid, message="Stored")
 
-    async def delete(self, record_id: str) -> str:
+    async def delete(self, record_id: str) -> DeleteResponse:
         """Delete from canonical, and engine if supported."""
         found = await self._store.delete_record(record_id)
         if Operation.DELETE in self._engine_ops:
@@ -97,9 +107,13 @@ class CanonicalEngineWrapper(EngineProtocol):
                 await self._engine.delete(record_id)
             except Exception as e:
                 self._logger.error(f"Error deleting from engine: {e}")
-        return f"Deleted: {record_id}" if found else f"Not found: {record_id}"
+        return DeleteResponse(
+            id=record_id,
+            found=found,
+            message="Deleted" if found else "Not found",
+        )
 
-    async def list_records(self, limit: int = 100, offset: int = 0) -> str:
+    async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
         """List from engine if supported, else from canonical."""
         if Operation.LIST_RECORDS in self._engine_ops:
             try:
@@ -108,15 +122,18 @@ class CanonicalEngineWrapper(EngineProtocol):
                 self._logger.error(f"Error listing records from engine: {e}")
 
         records = await self._store.list_records(limit, offset)
-        if not records:
-            return "No records found."
+        total = await self._store.count_records()
 
-        lines = []
-        for r in records:
-            preview = r.content[:100] + "..." if len(r.content) > 100 else r.content
-            lines.append(f"[{r.id}] {r.created_at.isoformat()} ({r.content_type})")
-            lines.append(f"  {preview}")
-        return "\n".join(lines)
+        summaries = [
+            RecordSummary(
+                id=r.id,
+                created_at=r.created_at,
+                content_type=r.content_type,
+                preview=r.content[:100] + "..." if len(r.content) > 100 else r.content,
+            )
+            for r in records
+        ]
+        return ListResponse(records=summaries, total=total, limit=limit, offset=offset)
 
 
 def with_canonical(config: "MemoryConfig", engine: EngineProtocol) -> EngineProtocol:

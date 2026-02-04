@@ -3,7 +3,16 @@
 __all__ = ["EngineProtocol", "Operation"]
 
 from enum import Enum, auto
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from kbm.models import (
+        DeleteResponse,
+        InfoResponse,
+        InsertResponse,
+        ListResponse,
+        QueryResponse,
+    )
 
 
 class Operation(Enum):
@@ -26,13 +35,35 @@ class EngineProtocol(Protocol):
     """Contract for memory engines."""
 
     @property
-    def supported_operations(self) -> frozenset[Operation]: ...
-    async def info(self) -> str: ...
-    async def query(self, query: str, top_k: int = 10) -> str: ...
-    async def insert(self, content: str, doc_id: str | None = None) -> str: ...
-    async def insert_file(self, file_path: str, doc_id: str | None = None) -> str: ...
-    async def delete(self, record_id: str) -> str: ...
-    async def list_records(self, limit: int = 100, offset: int = 0) -> str: ...
+    def supported_operations(self) -> frozenset[Operation]:
+        """Supported operations by this engine."""
+        ...
+
+    async def info(self) -> "InfoResponse":
+        """Get information about the knowledge base."""
+        ...
+
+    async def query(self, query: str, top_k: int = 10) -> "QueryResponse":
+        """Search the knowledge base for relevant information."""
+        ...
+
+    async def insert(self, content: str, doc_id: str | None = None) -> "InsertResponse":
+        """Insert content into the knowledge base."""
+        ...
+
+    async def insert_file(
+        self, file_path: str, doc_id: str | None = None
+    ) -> "InsertResponse":
+        """Insert content from a file into the knowledge base."""
+        ...
+
+    async def delete(self, record_id: str) -> "DeleteResponse":
+        """Delete a record from the knowledge base."""
+        ...
+
+    async def list_records(self, limit: int = 100, offset: int = 0) -> "ListResponse":
+        """List records in the knowledge base."""
+        ...
 
 
 # Validate at import: every Operation must have a matching method

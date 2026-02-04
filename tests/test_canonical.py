@@ -147,13 +147,17 @@ class TestCanonicalWrapper:
     @pytest.fixture
     def mock_engine(self) -> MagicMock:
         """Create a mock engine with async methods."""
+        from kbm.models import QueryResponse
+
         engine = MagicMock()
         engine.supported_operations = frozenset(
             {Operation.INSERT, Operation.QUERY, Operation.DELETE}
         )
-        # Make methods async-compatible
+        # Make methods async-compatible with proper return types
         engine.insert = AsyncMock(return_value="inserted")
-        engine.query = AsyncMock(return_value="results")
+        engine.query = AsyncMock(
+            return_value=QueryResponse(results=[], query="", total=0)
+        )
         engine.delete = AsyncMock(return_value="deleted")
         return engine
 
@@ -169,9 +173,9 @@ class TestCanonicalWrapper:
     ) -> None:
         """Insert writes to canonical store."""
         result = await wrapped.insert("test content")
-        assert "Inserted:" in result
-        rid = result.split(": ")[1]
-        record = await store.get_record(rid)
+        assert result.id
+        assert result.message == "Inserted"
+        record = await store.get_record(result.id)
         assert record is not None
         assert record.content == "test content"
 
@@ -186,9 +190,14 @@ class TestCanonicalWrapper:
         self, wrapped: CanonicalEngineWrapper, mock_engine: MagicMock
     ) -> None:
         """Query goes to engine (optimized indexes)."""
+        from kbm.models import QueryResponse
+
+        mock_engine.query = AsyncMock(
+            return_value=QueryResponse(results=[], query="search term", total=0)
+        )
         result = await wrapped.query("search term")
         mock_engine.query.assert_called_once_with("search term", 10)
-        assert result == "results"
+        assert result.query == "search term"
 
     async def test_delete_removes_from_canonical(
         self, wrapped: CanonicalEngineWrapper, store: CanonicalStore
@@ -196,7 +205,7 @@ class TestCanonicalWrapper:
         """Delete removes from canonical store."""
         await wrapped.insert("test content", doc_id="to-delete")
         result = await wrapped.delete("to-delete")
-        assert "Deleted:" in result
+        assert result.found is True
         assert await store.get_record("to-delete") is None
 
     async def test_list_records_from_canonical(
@@ -207,8 +216,9 @@ class TestCanonicalWrapper:
         await wrapped.insert("second", doc_id="r2")
 
         result = await wrapped.list_records()
-        assert "[r1]" in result
-        assert "[r2]" in result
+        ids = {r.id for r in result.records}
+        assert "r1" in ids
+        assert "r2" in ids
 
 
 class TestWithCanonical:

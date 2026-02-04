@@ -36,7 +36,7 @@ class RAGAnythingConfig(EngineConfig):
     llm_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-large"
     embedding_dim: int = 3072
-    query_mode: str = "hybrid"
+    query_mode: str = "mix"  # rag-anything default
 
     # Capabilities
     enable_image_processing: bool = True
