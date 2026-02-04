@@ -1,77 +1,85 @@
 """CLI package."""
 
-__all__ = ["app", "main"]
+__all__ = ["app", "console", "err_console", "main"]
 
 import logging
+import sys
 
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.panel import Panel
 
 from kbm.config import app_settings
 
+# Separate consoles for stdout/stderr (enables proper piping)
 console = Console()
+err_console = Console(stderr=True)
+
 app = typer.Typer(
     name=app_settings.name,
     help=app_settings.description,
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
+    rich_markup_mode="rich",  # Enable rich markup in help text
 )
+
+# App logger (not root - avoids library noise)
+log = logging.getLogger("kbm")
 
 
 def _version_callback(value: bool) -> None:
     if value:
-        console.print(f"{app_settings.name} {app_settings.version}")
+        typer.echo(f"{app_settings.name} {app_settings.version}")
         raise typer.Exit(code=0)
 
 
 @app.callback()
 def callback(
-    debug: bool = typer.Option(False, "-d", "--debug", help="Debug logging."),
+    debug: bool = typer.Option(False, "-d", "--debug", help="Enable debug logging."),
     version: bool = typer.Option(
         False,
         "-v",
         "--version",
-        help="Show version.",
+        help="Show version and exit.",
         callback=_version_callback,
         is_eager=True,
     ),
 ) -> None:
-    if debug:
-        logging.root.setLevel(logging.DEBUG)
-    logging.root.addHandler(RichHandler(console=console))
+    """Persistent memory for LLMs via MCP."""
+    # Configure logging once
+    if not log.handlers:
+        handler = RichHandler(
+            console=err_console,
+            show_time=debug,
+            show_path=debug,
+            rich_tracebacks=True,
+        )
+        log.addHandler(handler)
+    log.setLevel(logging.DEBUG if debug else logging.WARNING)
 
 
 @app.command()
-def info() -> None:
-    """Show application information."""
-    info = "\n".join(
-        [
-            f"[dim]Version:[/dim]  {app_settings.version}",
-            f"[dim]Home:[/dim]     {app_settings.home}",
-            f"[dim]Memories:[/dim] {app_settings.memories_path}",
-            f"[dim]Data:[/dim]     {app_settings.data_root}",
-        ]
-    )
-    console.print(
-        Panel(info, title=app_settings.name, subtitle=app_settings.description)
-    )
+def home() -> None:
+    """Print application home directory."""
+    typer.echo(app_settings.data_root)
 
 
 def main(prog_name: str | None = None) -> None:
     """Entry point."""
     try:
         app(prog_name=prog_name)
+    except KeyboardInterrupt:
+        err_console.print("[dim]Interrupted[/dim]")
+        sys.exit(130)
     except typer.Abort:
-        console.print("[yellow]Aborted.[/yellow]")
-        raise SystemExit(1) from None
+        err_console.print("[yellow]Aborted[/yellow]")
+        sys.exit(1)
     except Exception as e:
-        if logging.root.level == logging.DEBUG:
-            console.print_exception()
+        if log.level == logging.DEBUG:
+            err_console.print_exception()
         else:
-            console.print(f"[red]Error:[/red] {e}")
-        raise SystemExit(1) from None
+            err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
 
 
 # Register commands

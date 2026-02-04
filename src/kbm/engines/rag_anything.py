@@ -2,6 +2,7 @@
 
 __all__ = ["RAGAnythingEngine"]
 
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,7 +21,11 @@ if TYPE_CHECKING:
 class RAGAnythingEngine(EngineProtocol):
     """Knowledge graph RAG. Does not support delete/list_records."""
 
+    logger = logging.getLogger(__name__)
+
     def __init__(self, config: "MemoryConfig") -> None:
+        self.logger.info("Initializing RAG-Anything engine...")
+
         self.config = config.rag_anything
         self.working_dir = config.engine_data_path
         self.working_dir.mkdir(parents=True, exist_ok=True)

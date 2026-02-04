@@ -2,6 +2,7 @@
 
 __all__ = ["MCPClientEngine"]
 
+import logging
 from typing import TYPE_CHECKING
 
 from fastmcp import Client
@@ -15,7 +16,10 @@ if TYPE_CHECKING:
 class MCPClientEngine(EngineProtocol):
     """Wraps a remote MCP server as an engine."""
 
+    logger = logging.getLogger(__name__)
+
     def __init__(self, url: str) -> None:
+        self.logger.info(f"Initializing MCP client at: {url}")
         self._url = url
         self._client = Client(self._url)
 
@@ -26,12 +30,18 @@ class MCPClientEngine(EngineProtocol):
     async def info(self) -> str:
         """Get info from remote server."""
         async with self._client:
+            self.logger.debug(f"Fetching info from remote MCP server: {self._url}")
+
             result = await self._client.call_tool(Operation.INFO.method_name)
             return str(result.data) if result.data else f"Remote: {self._url}"
 
     async def query(self, query: str, top_k: int = 10) -> str:
         """Query the remote server."""
         async with self._client:
+            self.logger.debug(
+                f"Querying remote MCP server: {self._url} with query: {query}"
+            )
+
             result = await self._client.call_tool(
                 Operation.QUERY.method_name, {"query": query, "top_k": top_k}
             )

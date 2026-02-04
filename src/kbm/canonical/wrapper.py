@@ -122,4 +122,6 @@ class CanonicalEngineWrapper(EngineProtocol):
 def with_canonical(config: "MemoryConfig", engine: EngineProtocol) -> EngineProtocol:
     """Wrap engine with canonical storage."""
     store = CanonicalStore(config.canonical_url)
-    return CanonicalEngineWrapper(engine, store)
+    return CanonicalEngineWrapper(
+        engine, store, logger=logging.getLogger(engine.__class__.__name__)
+    )

@@ -3,6 +3,7 @@
 __all__ = ["FederationEngine"]
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,10 @@ if TYPE_CHECKING:
 class FederationEngine(EngineProtocol):
     """Queries multiple sources and combines results."""
 
+    logger = logging.getLogger(__name__)
+
     def __init__(self, config: "MemoryConfig") -> None:
+        self.logger.info("Initializing Federation engine...")
         from kbm.config import MemoryConfig
         from kbm.engines import get_engine
         from kbm.engines.mcp_client import MCPClientEngine
@@ -40,6 +44,8 @@ class FederationEngine(EngineProtocol):
             engine = MCPClientEngine(url)
             self._sources.append((url, engine))
 
+        self.logger.info(f"Federation engine loaded {len(self._sources)} sources.")
+
     @property
     def supported_operations(self) -> frozenset[Operation]:
         return frozenset({Operation.INFO, Operation.QUERY})
@@ -48,22 +54,28 @@ class FederationEngine(EngineProtocol):
         """Get info from all federated sources."""
         lines = [f"Engine: federation ({len(self._sources)} sources)"]
         for name, engine in self._sources:
+            self.logger.debug(f"Fetching info from federated source: {name}")
+
             try:
                 info = await engine.info()
                 lines.append(f"\n[{name}]\n{info}")
             except Exception as e:
-                lines.append(f"\n[{name}] Error: {e}")
+                self.logger.error(f"Error fetching info from {name}: {e}")
+                lines.append(f"\n[{name}] Failed to retrieve info.")
+
         return "\n".join(lines)
 
     async def query(self, query: str, top_k: int = 10) -> str:
         """Query all sources and combine results."""
+        self.logger.debug(f"Querying federated sources with query: {query}")
         tasks = [engine.query(query, top_k) for _, engine in self._sources]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         lines = []
         for (name, _), result in zip(self._sources, results):
             if isinstance(result, BaseException):
-                lines.append(f"[{name}] Error: {result}")
+                self.logger.error(f"Error querying {name}: {result}")
+                lines.append(f"[{name}] Failed to query.")
             elif "No matching" not in result and result.strip():
                 lines.append(f"[{name}]\n{result}")
 

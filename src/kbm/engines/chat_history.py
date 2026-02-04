@@ -2,6 +2,7 @@
 
 __all__ = ["ChatHistoryEngine"]
 
+import logging
 from typing import TYPE_CHECKING
 
 from kbm.canonical import CanonicalStore
@@ -14,7 +15,10 @@ if TYPE_CHECKING:
 class ChatHistoryEngine(EngineProtocol):
     """Simple text search. Storage handled by canonical layer."""
 
+    logger = logging.getLogger(__name__)
+
     def __init__(self, config: "MemoryConfig") -> None:
+        self.logger.info("Initializing Chat History engine...")
         self._store = CanonicalStore(config.canonical_url)
 
     @property
@@ -23,11 +27,13 @@ class ChatHistoryEngine(EngineProtocol):
 
     async def info(self) -> str:
         """Get information about the knowledge base."""
+        self.logger.debug("Fetching chat history info...")
         count = await self._store.count_records()
         return f"Engine: chat-history\nRecords: {count}"
 
     async def query(self, query: str, top_k: int = 10) -> str:
         """Search the knowledge base for relevant information."""
+        self.logger.debug(f"Searching chat history with query: {query}")
         records = await self._store.search_records(query, top_k)
         if not records:
             return "No matching records found."
@@ -40,16 +46,16 @@ class ChatHistoryEngine(EngineProtocol):
 
     async def insert(self, content: str, doc_id: str | None = None) -> str:
         """Handled by canonical layer."""
-        raise NotImplementedError
+        raise NotImplementedError("Handled by canonical layer.")
 
     async def insert_file(self, file_path: str, doc_id: str | None = None) -> str:
         """Handled by canonical layer."""
-        raise NotImplementedError
+        raise NotImplementedError("Handled by canonical layer.")
 
     async def delete(self, record_id: str) -> str:
         """Handled by canonical layer."""
-        raise NotImplementedError
+        raise NotImplementedError("Handled by canonical layer.")
 
     async def list_records(self, limit: int = 100, offset: int = 0) -> str:
         """Handled by canonical layer."""
-        raise NotImplementedError
+        raise NotImplementedError("Handled by canonical layer.")

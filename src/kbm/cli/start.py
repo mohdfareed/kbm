@@ -12,11 +12,9 @@ from . import app, console
 
 @app.command()
 def start(
-    name: str | None = typer.Argument(
-        None, help="Memory name (global) or omit to use local memory."
-    ),
+    name: str | None = typer.Argument(None, help="Memory name (omit for local)."),
     config: Path | None = typer.Option(
-        None, "-c", "--config", help="Config file path to override name."
+        None, "-c", "--config", help="Config file path."
     ),
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
@@ -24,14 +22,11 @@ def start(
 ) -> None:
     """Start the MCP server."""
     if name and config:
-        raise typer.BadParameter("Cannot specify both name and config.")
+        raise typer.BadParameter("Specify either name or --config, not both.")
 
-    if config:
-        cfg = MemoryConfig.from_config(config)
-    else:
-        cfg = MemoryConfig.from_name(name)
-
+    cfg = MemoryConfig.from_config(config) if config else MemoryConfig.from_name(name)
     cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
+
     if transport:
         cfg.transport = transport
     if host:
@@ -39,10 +34,10 @@ def start(
     if port:
         cfg.port = port
 
-    engine_text = f"• {cfg.engine.value} • {cfg.transport.value}"
-    console.print(f"[bold]{cfg.name}[/bold] [dim]{engine_text}[/dim]")
+    # Header
+    console.print(f"[bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]")
     if cfg.transport == Transport.HTTP:
-        console.print(f"[dim]Listening on[/dim] http://{cfg.host}:{cfg.port}")
+        console.print(f"[dim]http://{cfg.host}:{cfg.port}[/dim]")
     console.print()
 
     run_server(cfg)
