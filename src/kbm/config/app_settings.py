@@ -1,6 +1,4 @@
-"""Application metadata."""
-
-__all__ = ["app_metadata"]
+"""Application settings."""
 
 import os
 from functools import cached_property
@@ -11,23 +9,20 @@ import dotenv
 import typer
 from pydantic import BaseModel
 
-_KBM_HOME = "KBM_HOME"
+KBM_ENV_BASE = "KBM_"
+
+_KBM_HOME = f"{KBM_ENV_BASE}HOME"
 _meta = metadata("kbm")
 
 
 class _AppMetadata(BaseModel):
-    """Application metadata. Singleton instance exported as `app_metadata`."""
-
     name: str = _meta["Name"]
     version: str = _meta["Version"]
     description: str = _meta["Summary"]
 
     @cached_property
     def home(self) -> Path:
-        """KBM home directory ($KBM_HOME or platform default).
-
-        Priority: .kbm.env > .env > environment variable > platform default.
-        """
+        """KBM home directory ($KBM_HOME or platform default)."""
         env = (
             dotenv.dotenv_values(".kbm.env").get(_KBM_HOME)
             or dotenv.dotenv_values(".env").get(_KBM_HOME)
@@ -45,17 +40,17 @@ class _AppMetadata(BaseModel):
 
     @cached_property
     def data_root(self) -> Path:
-        """Root directory for all memory data ($KBM_HOME/data/)."""
+        """Root directory for memory data storage."""
         return self.home / "data"
 
-    def local_config_path(self) -> Path:
-        """Path to local config (.kbm.yaml in cwd)."""
-        return Path.cwd() / ".kbm.yaml"
+    def global_config_files(self) -> list[Path]:
+        """List of global memory config files."""
+        return sorted([f for f in self.memories_path.glob("*") if f.is_file()])
 
-    def named_config_path(self, name: str) -> Path:
-        """Path to global memory config ($KBM_HOME/memories/{name}.yaml)."""
-        return self.memories_path / f"{name}.yaml"
+    def local_config_files(self) -> list[Path]:
+        """List of local memory config files in current directory."""
+        return sorted([f for f in Path.cwd().glob(".kbm*") if f.is_file()])
 
 
-app_metadata = _AppMetadata()
+app_settings = _AppMetadata()
 """Application metadata singleton."""

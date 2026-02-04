@@ -10,7 +10,7 @@ from kbm.engines import get_engine
 
 def run_server(config: MemoryConfig) -> None:
     """Run the MCP server."""
-    mcp = FastMCP(name=config.name, instructions=config.instructions)
+    mcp = FastMCP(name=config.server_name, instructions=config.instructions)
     engine = get_engine(config)
 
     for op in engine.supported_operations:
@@ -21,3 +21,5 @@ def run_server(config: MemoryConfig) -> None:
             mcp.run(transport="stdio")
         case Transport.HTTP:
             mcp.run(transport="http", host=config.host, port=config.port)
+        case _:
+            raise NotImplementedError(f"Unsupported transport: {config.transport}")

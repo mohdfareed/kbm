@@ -16,4 +16,4 @@ EXPOSE 8000
 
 # Default: start HTTP server for memory mounted at /config.yaml
 ENTRYPOINT ["kbm"]
-CMD ["--config", "/config.yaml", "start", "--transport", "http"]
+CMD ["start", "-c", "/config.yaml", "-t", "http"]

@@ -37,4 +37,6 @@ class EngineProtocol(Protocol):
 
 # Validate at import: every Operation must have a matching method
 for op in Operation:
-    assert hasattr(EngineProtocol, op.method_name)
+    assert hasattr(EngineProtocol, op.method_name), (
+        f"EngineProtocol is missing method for Operation.{op.name}"
+    )

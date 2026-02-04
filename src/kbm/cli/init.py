@@ -4,15 +4,18 @@ from pathlib import Path
 
 import typer
 
-from kbm.config import Engine, MemoryConfig, app_metadata
+from kbm.config import Engine, MemoryConfig, app_settings
 
-from .app import cli_app, console
+from . import app, console
 
 
-@cli_app.command()
+@app.command()
 def init(
     name: str | None = typer.Argument(
-        None, help="Memory name (global) or omit for local."
+        None, help="Memory name (global) or omit to use current directory name."
+    ),
+    local: bool = typer.Option(
+        False, "--local", help="Create a local memory instead of a global one."
     ),
     engine: Engine = typer.Option(Engine.CHAT_HISTORY, "-e", "--engine"),
     json: bool = typer.Option(
@@ -22,10 +25,12 @@ def init(
 ) -> None:
     """Create a new memory."""
     memory_name = name or Path.cwd().name
+
+    filename = f"{memory_name}.yaml" if not json else f"{memory_name}.json"
     config_path = (
-        app_metadata.local_config_path()
-        if name is None
-        else app_metadata.named_config_path(name)
+        app_settings.memories_path / filename
+        if not local
+        else Path.cwd() / f".kbm.{filename}"  # app settings local config glob
     )
 
     if config_path.exists() and not force:

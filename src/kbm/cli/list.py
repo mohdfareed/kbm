@@ -1,51 +1,61 @@
 """List command."""
 
-from kbm.config import MemoryConfig, app_metadata
+from kbm.config import MemoryConfig, app_settings
 
-from .app import cli_app, console
+from . import app, console
 
 
-@cli_app.command(name="list")
+@app.command(name="list")
 def list_memories() -> None:
     """List all memories."""
-    found = False
+    data_dirs = []
 
-    # Local memory
-    try:
-        cfg = MemoryConfig.load(name=None, config=None)
-        has_data = cfg.data_path.exists()
-        icon = "[green]●[/green]" if has_data else "[yellow]○[/yellow]"
+    # Local memories
+    for path in app_settings.local_config_files():
+        try:
+            cfg = MemoryConfig.from_config(path)
+            _print_memory(cfg)
+            data_dirs.append(cfg.data_path)
+
+        except Exception:
+            console.print(
+                f"[red]●[/red] [bold]{path.stem}[/bold] [red]• local • invalid[/red]"
+            )
+            data_dirs.append(None)
+
+    # Global memories
+    for path in app_settings.global_config_files():
+        try:
+            cfg = MemoryConfig.from_config(path)
+            _print_memory(cfg)
+            data_dirs.append(cfg.data_path)
+
+        except Exception:
+            console.print(
+                f"[red]●[/red] [bold]{path.stem}[/bold] [red]• global • invalid[/red]"
+            )
+            data_dirs.append(None)
+
+    # Orphaned data directories
+    for path in app_settings.data_root.iterdir():
+        if path not in data_dirs:
+            console.print(
+                f"[blue]●[/blue] [bold]{path.name}[/bold] [dim]• data • orphaned[/dim]"
+            )
+
+    if not data_dirs:
+        console.print("No memories found.")
+        console.print("Use [bold]kbm init[/bold] to create a new memory.")
+
+
+def _print_memory(cfg: MemoryConfig) -> None:
+    has_data = cfg.data_path.exists()
+    icon = "[green]●[/green]" if has_data else "[yellow]●[/yellow]"
+    if cfg.is_global:
+        console.print(
+            f"{icon} [bold]{cfg.name}[/bold] [dim]• global • {cfg.engine.value}[/dim]"
+        )
+    else:
         console.print(
             f"{icon} [bold]{cfg.name}[/bold] [dim]• local • {cfg.engine.value}[/dim]"
         )
-        found = True
-    except Exception:
-        console.print(f"[dim]No local memory found.[/dim]")
-
-    # Global memories
-    if app_metadata.memories_path.exists():
-        config_files = sorted(
-            f
-            for f in app_metadata.memories_path.iterdir()
-            if f.suffix in {".json", ".yaml", ".yml"}
-        )
-
-        for path in config_files:
-            try:
-                cfg = MemoryConfig.load(name=path.stem, config=None)
-                has_data = cfg.data_path.exists()
-                icon = "[green]●[/green]" if has_data else "[yellow]○[/yellow]"
-                console.print(
-                    f"{icon} [bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]"
-                )
-                found = True
-
-            except Exception:
-                console.print(
-                    f"[red]✗[/red] [bold]{path.stem}[/bold] [red]• invalid config[/red]"
-                )
-                found = True
-
-    if not found:
-        console.print("No memories found.")
-        console.print("Use [bold]kbm init[/bold] to create a new memory.")

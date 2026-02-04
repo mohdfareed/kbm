@@ -7,23 +7,31 @@ import typer
 from kbm.config import MemoryConfig, Transport
 from kbm.server import run_server
 
-from .app import cli_app, console
+from . import app, console
 
 
-@cli_app.command()
+@app.command()
 def start(
-    name: str | None = typer.Argument(None, help="Memory name or omit for local."),
+    name: str | None = typer.Argument(
+        None, help="Memory name (global) or omit to use local memory."
+    ),
     config: Path | None = typer.Option(
-        None, "-c", "--config", help="Config file path."
+        None, "-c", "--config", help="Config file path to override name."
     ),
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
     port: int | None = typer.Option(None, "-p", "--port"),
 ) -> None:
     """Start the MCP server."""
-    cfg = MemoryConfig.load(name=name, config=config)
-    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
+    if name and config:
+        raise typer.BadParameter("Cannot specify both name and config.")
 
+    if config:
+        cfg = MemoryConfig.from_config(config)
+    else:
+        cfg = MemoryConfig.from_name(name)
+
+    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
     if transport:
         cfg.transport = transport
     if host:

@@ -26,9 +26,9 @@ name: my-project
 engine: chat-history  # or rag-anything
 ```
 
-Environment variables (`KBM_*`) override config. Use `.env` for secrets.
+Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
 
-Data lives at `$KBM_HOME/data/<name>/`, never in your repo.
+Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir), never in your repo.
 
 ## CLI
 

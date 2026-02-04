@@ -41,7 +41,7 @@ class TestYamlLoading:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: my-memory\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.name == "my-memory"
 
     def test_loads_engine_from_yaml(self, tmp_path: Path) -> None:
@@ -49,7 +49,7 @@ class TestYamlLoading:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\nengine: rag-anything\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.engine == Engine.RAG_ANYTHING
 
     def test_loads_transport_from_yaml(self, tmp_path: Path) -> None:
@@ -57,7 +57,7 @@ class TestYamlLoading:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\ntransport: http\nport: 9000\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.transport == Transport.HTTP
         assert config.port == 9000
 
@@ -68,7 +68,7 @@ class TestYamlLoading:
             "name: test\nengine: rag-anything\nrag_anything:\n  embedding_dim: 1536\n"
         )
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.rag_anything.embedding_dim == 1536
 
     def test_default_values_applied(self, tmp_path: Path) -> None:
@@ -76,7 +76,7 @@ class TestYamlLoading:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.engine == Engine.CHAT_HISTORY  # default
         assert config.transport == Transport.STDIO  # default
         assert config.port == 8000  # default
@@ -84,7 +84,7 @@ class TestYamlLoading:
     def test_missing_yaml_file_raises(self, tmp_path: Path) -> None:
         """Raises error for missing YAML file."""
         with pytest.raises(Exception):
-            MemoryConfig.load(name=None, config=tmp_path / "nonexistent.yaml")
+            MemoryConfig.from_config(tmp_path / "nonexistent.yaml")
 
     def test_empty_yaml_file_raises(self, tmp_path: Path) -> None:
         """Empty YAML file still requires name."""
@@ -92,14 +92,14 @@ class TestYamlLoading:
         config_path.write_text("")
 
         with pytest.raises(ValidationError):
-            MemoryConfig.load(name=None, config=config_path)
+            MemoryConfig.from_config(config_path)
 
     def test_ignores_extra_fields(self, tmp_path: Path) -> None:
         """Extra fields in YAML are ignored."""
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\nunknown_field: value\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.name == "test"
         assert not hasattr(config, "unknown_field")
 
@@ -116,7 +116,7 @@ class TestEnvVarOverrides:
 
         monkeypatch.setenv("KBM_ENGINE", "rag-anything")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.name == "from-yaml"  # from YAML
         assert config.engine == Engine.RAG_ANYTHING  # from env
 
@@ -129,7 +129,7 @@ class TestEnvVarOverrides:
 
         monkeypatch.setenv("KBM_RAG_ANYTHING__EMBEDDING_DIM", "1536")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.rag_anything.embedding_dim == 1536
 
     def test_init_overrides_env_and_yaml(
@@ -155,14 +155,14 @@ class TestComputedPaths:
 
     def test_data_path(self, tmp_config: Path, tmp_home: Path) -> None:
         """data_path is $KBM_HOME/data/<name>/."""
-        config = MemoryConfig.load(name=None, config=tmp_config)
+        config = MemoryConfig.from_config(tmp_config)
         assert config.data_path == tmp_home / "data" / "test-memory"
 
     def test_engine_data_path_chat_history(
         self, tmp_config: Path, tmp_home: Path
     ) -> None:
         """engine_data_path includes engine subdirectory."""
-        config = MemoryConfig.load(name=None, config=tmp_config)
+        config = MemoryConfig.from_config(tmp_config)
         assert (
             config.engine_data_path
             == tmp_home / "data" / "test-memory" / "chat-history"
@@ -175,7 +175,7 @@ class TestComputedPaths:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\nengine: rag-anything\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.engine_data_path == tmp_home / "data" / "test" / "rag-anything"
 
     def test_engine_config_returns_correct_type(self, tmp_path: Path) -> None:
@@ -183,7 +183,7 @@ class TestComputedPaths:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("name: test\nengine: rag-anything\n")
 
-        config = MemoryConfig.load(name=None, config=config_path)
+        config = MemoryConfig.from_config(config_path)
         assert config.engine_config == config.rag_anything
 
 

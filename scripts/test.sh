@@ -3,6 +3,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 echo "==> Updating dependencies..."
+uv lock --upgrade
 uv sync --dev
 
 echo
@@ -19,7 +20,7 @@ uv run pyright src/ tests/
 
 echo
 echo "==> Running tests..."
-uv run pytest
+uv run pytest -q --cov=kbm --cov-report=term-missing
 
 echo
 echo "==> All checks passed!"

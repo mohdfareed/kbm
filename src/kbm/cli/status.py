@@ -6,21 +6,29 @@ import typer
 
 from kbm.config import MemoryConfig
 
-from .app import cli_app, console
+from . import app, console
 
 
-@cli_app.command()
+@app.command()
 def status(
-    name: str | None = typer.Argument(None, help="Memory name or omit for local."),
+    name: str | None = typer.Argument(
+        None, help="Memory name (global) or omit to use local memory."
+    ),
     config: Path | None = typer.Option(
-        None, "-c", "--config", help="Config file path."
+        None, "-c", "--config", help="Config file path to override name."
     ),
     full: bool = typer.Option(
         False, "--full", help="Include all options with defaults."
     ),
 ) -> None:
     """Show memory configuration."""
-    cfg = MemoryConfig.load(name=name, config=config)
+    if name and config:
+        raise typer.BadParameter("Cannot specify both name and config.")
+
+    if config:
+        cfg = MemoryConfig.from_config(config)
+    else:
+        cfg = MemoryConfig.from_name(name)
 
     console.print(f"[bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]")
     console.print(f"  [dim]Config:[/dim] {cfg.file_path}")

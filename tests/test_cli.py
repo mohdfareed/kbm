@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from kbm.cli.app import cli_app
+from kbm.cli import app
 
 runner = CliRunner()
 
@@ -16,29 +16,29 @@ class TestInit:
     def test_creates_local_config(
         self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Creates .kbm.yaml in current directory."""
+        """Creates .kbm.yaml in current directory with --local."""
         monkeypatch.chdir(tmp_path)
-        result = runner.invoke(cli_app, ["init"])
+        result = runner.invoke(app, ["init", "--local"])
 
         assert result.exit_code == 0
-        assert (tmp_path / ".kbm.yaml").exists()
+        assert (tmp_path / f".kbm.{tmp_path.name}.yaml").exists()
 
-        content = (tmp_path / ".kbm.yaml").read_text()
+        content = (tmp_path / f".kbm.{tmp_path.name}.yaml").read_text()
         assert f"name: {tmp_path.name}" in content
 
     def test_creates_global_config(self, tmp_home: Path) -> None:
         """Creates config in $KBM_HOME/memories/ for named memory."""
-        result = runner.invoke(cli_app, ["init", "test-memory"])
+        result = runner.invoke(app, ["init", "test-memory"])
 
         assert result.exit_code == 0
         config_path = tmp_home / "memories" / "test-memory.yaml"
         assert config_path.exists()
-        # Global configs don't include name (inferred from filename)
-        assert "name:" not in config_path.read_text()
+        # Global configs now include name (single source of truth)
+        assert "name: test-memory" in config_path.read_text()
 
     def test_creates_data_directory(self, tmp_home: Path) -> None:
         """Creates data directory in $KBM_HOME/data/."""
-        runner.invoke(cli_app, ["init", "test-memory"])
+        runner.invoke(app, ["init", "test-memory"])
 
         data_path = tmp_home / "data" / "test-memory"
         assert data_path.is_dir()
@@ -48,9 +48,9 @@ class TestInit:
     ) -> None:
         """Fails if config already exists."""
         monkeypatch.chdir(tmp_path)
-        (tmp_path / ".kbm.yaml").write_text("name: existing\n")
+        (tmp_path / f".kbm.{tmp_path.name}.yaml").write_text("name: existing\n")
 
-        result = runner.invoke(cli_app, ["init"])
+        result = runner.invoke(app, ["init", "--local"])
         assert result.exit_code != 0
 
     def test_force_overwrites(
@@ -58,15 +58,15 @@ class TestInit:
     ) -> None:
         """--force overwrites existing config."""
         monkeypatch.chdir(tmp_path)
-        (tmp_path / ".kbm.yaml").write_text("name: old\n")
+        (tmp_path / f".kbm.{tmp_path.name}.yaml").write_text("name: old\n")
 
-        result = runner.invoke(cli_app, ["init", "--force"])
+        result = runner.invoke(app, ["init", "--local", "--force"])
         assert result.exit_code == 0
-        assert "name: old" not in (tmp_path / ".kbm.yaml").read_text()
+        assert "name: old" not in (tmp_path / f".kbm.{tmp_path.name}.yaml").read_text()
 
     def test_engine_option(self, tmp_home: Path) -> None:
         """--engine sets the engine type."""
-        result = runner.invoke(cli_app, ["init", "rag-mem", "-e", "rag-anything"])
+        result = runner.invoke(app, ["init", "rag-mem", "-e", "rag-anything"])
 
         assert result.exit_code == 0
         content = (tmp_home / "memories" / "rag-mem.yaml").read_text()
@@ -78,30 +78,30 @@ class TestDelete:
 
     def test_deletes_global_memory(self, tmp_home: Path) -> None:
         """Deletes config and data for global memory."""
-        runner.invoke(cli_app, ["init", "to-delete"])
+        runner.invoke(app, ["init", "to-delete"])
         config_path = tmp_home / "memories" / "to-delete.yaml"
         data_path = tmp_home / "data" / "to-delete"
         assert config_path.exists()
 
-        result = runner.invoke(cli_app, ["delete", "to-delete", "--yes"])
+        result = runner.invoke(app, ["delete", "to-delete", "--yes"])
         assert result.exit_code == 0
         assert not config_path.exists()
         assert not data_path.exists()
 
     def test_keep_data_option(self, tmp_home: Path) -> None:
         """--keep-data preserves data directory."""
-        runner.invoke(cli_app, ["init", "keep-data-test"])
+        runner.invoke(app, ["init", "keep-data-test"])
         data_path = tmp_home / "data" / "keep-data-test"
 
         result = runner.invoke(
-            cli_app, ["delete", "keep-data-test", "--yes", "--keep-data"]
+            app, ["delete", "keep-data-test", "--yes", "--keep-data"]
         )
         assert result.exit_code == 0
         assert data_path.is_dir()
 
     def test_fails_if_not_exists(self, tmp_home: Path) -> None:
         """Fails if memory doesn't exist."""
-        result = runner.invoke(cli_app, ["delete", "nonexistent", "--yes"])
+        result = runner.invoke(app, ["delete", "nonexistent", "--yes"])
         assert result.exit_code != 0
 
 
@@ -110,16 +110,16 @@ class TestList:
 
     def test_shows_no_memories(self, tmp_home: Path) -> None:
         """Shows helpful message when no memories exist."""
-        result = runner.invoke(cli_app, ["list"])
+        result = runner.invoke(app, ["list"])
         assert result.exit_code == 0
         assert "No memories found" in result.stdout
 
     def test_shows_global_memories(self, tmp_home: Path) -> None:
         """Lists global memories."""
-        runner.invoke(cli_app, ["init", "mem-one"])
-        runner.invoke(cli_app, ["init", "mem-two"])
+        runner.invoke(app, ["init", "mem-one"])
+        runner.invoke(app, ["init", "mem-two"])
 
-        result = runner.invoke(cli_app, ["list"])
+        result = runner.invoke(app, ["list"])
         assert result.exit_code == 0
         assert "mem-one" in result.stdout
         assert "mem-two" in result.stdout
@@ -127,14 +127,14 @@ class TestList:
     def test_shows_local_config(
         self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Shows local .kbm.yaml if present."""
+        """Shows local .kbm* files if present."""
         monkeypatch.chdir(tmp_path)
         (tmp_path / ".kbm.yaml").write_text("name: local-test\nengine: chat-history\n")
 
-        result = runner.invoke(cli_app, ["list"])
+        result = runner.invoke(app, ["list"])
         assert result.exit_code == 0
         assert "local-test" in result.stdout
-        assert "local" in result.stdout
+        assert "local" in result.stdout.lower()
 
 
 class TestStatus:
@@ -142,9 +142,9 @@ class TestStatus:
 
     def test_shows_config(self, tmp_home: Path) -> None:
         """Shows memory configuration."""
-        runner.invoke(cli_app, ["init", "status-test"])
+        runner.invoke(app, ["init", "status-test"])
 
-        result = runner.invoke(cli_app, ["status", "status-test"])
+        result = runner.invoke(app, ["status", "status-test"])
         assert result.exit_code == 0
         assert "status-test" in result.stdout
 
@@ -153,11 +153,11 @@ class TestStatus:
     ) -> None:
         """Shows local config when no name given."""
         monkeypatch.chdir(tmp_path)
-        (tmp_path / ".kbm.yaml").write_text("name: local\nengine: chat-history\n")
+        runner.invoke(app, ["init", "--local"])
 
-        result = runner.invoke(cli_app, ["status"])
+        result = runner.invoke(app, ["status"])
         assert result.exit_code == 0
-        assert "local" in result.stdout
+        assert tmp_path.name in result.stdout
 
     def test_fails_without_config(
         self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
@@ -165,7 +165,7 @@ class TestStatus:
         """Fails gracefully when no config found."""
         monkeypatch.chdir(tmp_path)
 
-        result = runner.invoke(cli_app, ["status"])
+        result = runner.invoke(app, ["status"])
         assert result.exit_code != 0
 
     def test_config_flag(self, tmp_path: Path, tmp_home: Path) -> None:
@@ -173,6 +173,6 @@ class TestStatus:
         config = tmp_path / "custom.yaml"
         config.write_text("name: custom\nengine: chat-history\n")
 
-        result = runner.invoke(cli_app, ["status", "--config", str(config)])
+        result = runner.invoke(app, ["status", "--config", str(config)])
         assert result.exit_code == 0
         assert "custom" in result.stdout
