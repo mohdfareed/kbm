@@ -15,6 +15,7 @@ class Engine(str, Enum):
 
     CHAT_HISTORY = "chat-history"
     RAG_ANYTHING = "rag-anything"
+    FEDERATION = "federation"
 
 
 # MARK: Engine-specific Configs
@@ -51,3 +52,11 @@ class CanonicalConfig(EngineConfig):
     #   sqlite+aiosqlite:///path/to/db.sqlite
     #   postgresql+asyncpg://user:pass@host/db
     database_url: str | None = None
+
+
+class FederationConfig(EngineConfig):
+    """Federation engine configuration."""
+
+    memories: list[str] = []  # Memory names to load
+    configs: list[str] = []  # Config file paths to load
+    remotes: list[str] = []  # MCP server URLs (http/https)

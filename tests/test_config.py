@@ -178,14 +178,6 @@ class TestComputedPaths:
         config = MemoryConfig.from_config(config_path)
         assert config.engine_data_path == tmp_home / "data" / "test" / "rag-anything"
 
-    def test_engine_config_returns_correct_type(self, tmp_path: Path) -> None:
-        """engine_config returns the config for selected engine."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\nengine: rag-anything\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.engine_config == config.rag_anything
-
 
 class TestSourcePriority:
     """Test config source priority: init > env > dotenv > yaml."""

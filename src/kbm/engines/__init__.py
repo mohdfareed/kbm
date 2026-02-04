@@ -23,6 +23,10 @@ def get_engine(config: "MemoryConfig") -> EngineProtocol:
             from kbm.engines.rag_anything import RAGAnythingEngine
 
             engine = RAGAnythingEngine(config)
+        case Engine.FEDERATION:
+            from kbm.engines.federation import FederationEngine
+
+            return FederationEngine(config)  # No canonical wrap
 
     # Wrap with canonical storage for durability
     return with_canonical(config, engine)

@@ -12,6 +12,7 @@ from .engine_config import (
     ChatHistoryConfig,
     Engine,
     EngineConfig,
+    FederationConfig,
     RAGAnythingConfig,
 )
 
@@ -43,17 +44,9 @@ class MemoryConfig(AppConfig):
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
     canonical: CanonicalConfig = CanonicalConfig()
+    federation: FederationConfig = FederationConfig()
 
     # MARK: Computed Properties
-
-    @computed_field
-    @property
-    def engine_config(self) -> EngineConfig:
-        match self.engine:
-            case Engine.CHAT_HISTORY:
-                return self.chat_history
-            case Engine.RAG_ANYTHING:
-                return self.rag_anything
 
     @computed_field
     @property
