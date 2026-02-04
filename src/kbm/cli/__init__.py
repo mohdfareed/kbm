@@ -7,6 +7,7 @@ import logging
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.panel import Panel
 
 from kbm.config import app_settings
 
@@ -40,6 +41,22 @@ def callback(
     if debug:
         logging.root.setLevel(logging.DEBUG)
     logging.root.addHandler(RichHandler(console=console))
+
+
+@app.command()
+def info() -> None:
+    """Show application information."""
+    info = "\n".join(
+        [
+            f"[dim]Version:[/dim]  {app_settings.version}",
+            f"[dim]Home:[/dim]     {app_settings.home}",
+            f"[dim]Memories:[/dim] {app_settings.memories_path}",
+            f"[dim]Data:[/dim]     {app_settings.data_root}",
+        ]
+    )
+    console.print(
+        Panel(info, title=app_settings.name, subtitle=app_settings.description)
+    )
 
 
 def main(prog_name: str | None = None) -> None:
