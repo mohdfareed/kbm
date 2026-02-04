@@ -47,15 +47,15 @@ class CanonicalEngineWrapper(EngineProtocol):
         return self._engine_ops | canonical_ops
 
     async def info(self) -> InfoResponse:
-        """Get info from engine."""
         try:
             return await self._engine.info()
         except Exception as e:
             self._logger.error(f"Error getting engine info: {e}")
-            return InfoResponse(engine="unknown", records=0)
+
+        count = await self._store.count_records()
+        return InfoResponse(engine="unknown", records=count)
 
     async def query(self, query: str, top_k: int = 10) -> QueryResponse:
-        """Query the underlying engine."""
         try:
             return await self._engine.query(query, top_k)
         except Exception as e:
@@ -63,11 +63,10 @@ class CanonicalEngineWrapper(EngineProtocol):
             return QueryResponse(results=[], query=query, total=0)
 
     async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
-        """Insert to canonical, then to engine if supported."""
         rid = await self._store.insert_record(content, doc_id)
         if Operation.INSERT in self._engine_ops:
             try:
-                await self._engine.insert(content, rid)
+                return await self._engine.insert(content, rid)
             except Exception as e:
                 self._logger.error(f"Error inserting into engine: {e}")
         return InsertResponse(id=rid)
@@ -75,7 +74,6 @@ class CanonicalEngineWrapper(EngineProtocol):
     async def insert_file(
         self, file_path: str, doc_id: str | None = None
     ) -> InsertResponse:
-        """Store file in canonical, delegate to engine if supported."""
         path = Path(file_path).expanduser().resolve()
         rid = await self._store.insert_record(
             content=str(path),
@@ -94,19 +92,20 @@ class CanonicalEngineWrapper(EngineProtocol):
 
         if Operation.INSERT_FILE in self._engine_ops:
             try:
-                await self._engine.insert_file(file_path, rid)
+                return await self._engine.insert_file(file_path, rid)
             except Exception as e:
                 self._logger.error(f"Error inserting file into engine: {e}")
         return InsertResponse(id=rid, message="Stored")
 
     async def delete(self, record_id: str) -> DeleteResponse:
-        """Delete from canonical, and engine if supported."""
         found = await self._store.delete_record(record_id)
+
         if Operation.DELETE in self._engine_ops:
             try:
-                await self._engine.delete(record_id)
+                return await self._engine.delete(record_id)
             except Exception as e:
                 self._logger.error(f"Error deleting from engine: {e}")
+
         return DeleteResponse(
             id=record_id,
             found=found,
@@ -114,7 +113,6 @@ class CanonicalEngineWrapper(EngineProtocol):
         )
 
     async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
-        """List from engine if supported, else from canonical."""
         if Operation.LIST_RECORDS in self._engine_ops:
             try:
                 return await self._engine.list_records(limit, offset)
@@ -133,6 +131,7 @@ class CanonicalEngineWrapper(EngineProtocol):
             )
             for r in records
         ]
+
         return ListResponse(records=summaries, total=total, limit=limit, offset=offset)
 
 

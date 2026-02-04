@@ -34,7 +34,7 @@ class RAGAnythingEngine(EngineProtocol):
         self.logger.info("Initializing RAG-Anything engine...")
 
         self.config = config.rag_anything
-        self.working_dir = config.engine_data_path
+        self.working_dir = config.data_path / "rag-anything"
         self.working_dir.mkdir(parents=True, exist_ok=True)
 
         self._api_key = os.environ.get("OPENAI_API_KEY", self.config.api_key)

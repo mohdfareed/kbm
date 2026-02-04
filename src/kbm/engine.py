@@ -40,29 +40,58 @@ class EngineProtocol(Protocol):
         ...
 
     async def info(self) -> "InfoResponse":
-        """Get information about the knowledge base."""
+        """Get knowledge base metadata.
+
+        Returns engine type, record count, and configuration details.
+        """
         ...
 
     async def query(self, query: str, top_k: int = 10) -> "QueryResponse":
-        """Search the knowledge base for relevant information."""
+        """Search the knowledge base.
+
+        Args:
+            query: Search text to find matching records.
+            top_k: Maximum number of results to return.
+        """
         ...
 
     async def insert(self, content: str, doc_id: str | None = None) -> "InsertResponse":
-        """Insert content into the knowledge base."""
+        """Add text content to the knowledge base.
+
+        Args:
+            content: Text content to store.
+            doc_id: Optional custom ID. Auto-generated if not provided.
+        """
         ...
 
     async def insert_file(
         self, file_path: str, doc_id: str | None = None
     ) -> "InsertResponse":
-        """Insert content from a file into the knowledge base."""
+        """Add a file to the knowledge base.
+
+        Supports PDF, images, and other document formats depending on engine.
+
+        Args:
+            file_path: Path to the file to ingest.
+            doc_id: Optional custom ID. Auto-generated if not provided.
+        """
         ...
 
     async def delete(self, record_id: str) -> "DeleteResponse":
-        """Delete a record from the knowledge base."""
+        """Remove a record from the knowledge base.
+
+        Args:
+            record_id: ID of the record to delete.
+        """
         ...
 
     async def list_records(self, limit: int = 100, offset: int = 0) -> "ListResponse":
-        """List records in the knowledge base."""
+        """List records in the knowledge base.
+
+        Args:
+            limit: Maximum number of records to return.
+            offset: Number of records to skip for pagination.
+        """
         ...
 
 

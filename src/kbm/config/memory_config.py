@@ -59,11 +59,6 @@ class MemoryConfig(AppConfig):
 
     @computed_field
     @property
-    def engine_data_path(self) -> Path:
-        return self.data_path / self.engine.value
-
-    @computed_field
-    @property
     def canonical_url(self) -> str:
         """Database URL for canonical storage."""
         if self.canonical.database_url:

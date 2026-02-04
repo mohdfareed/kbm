@@ -23,9 +23,7 @@ def start(
     """Start the MCP server."""
     if name and config:
         raise typer.BadParameter("Specify either name or --config, not both.")
-
     cfg = MemoryConfig.from_config(config) if config else MemoryConfig.from_name(name)
-    cfg.engine_data_path.mkdir(parents=True, exist_ok=True)
 
     if transport:
         cfg.transport = transport

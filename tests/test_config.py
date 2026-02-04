@@ -158,26 +158,6 @@ class TestComputedPaths:
         config = MemoryConfig.from_config(tmp_config)
         assert config.data_path == tmp_home / "data" / "test-memory"
 
-    def test_engine_data_path_chat_history(
-        self, tmp_config: Path, tmp_home: Path
-    ) -> None:
-        """engine_data_path includes engine subdirectory."""
-        config = MemoryConfig.from_config(tmp_config)
-        assert (
-            config.engine_data_path
-            == tmp_home / "data" / "test-memory" / "chat-history"
-        )
-
-    def test_engine_data_path_rag_anything(
-        self, tmp_path: Path, tmp_home: Path
-    ) -> None:
-        """engine_data_path changes with engine."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\nengine: rag-anything\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.engine_data_path == tmp_home / "data" / "test" / "rag-anything"
-
 
 class TestSourcePriority:
     """Test config source priority: init > env > dotenv > yaml."""
