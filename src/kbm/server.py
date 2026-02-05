@@ -14,7 +14,16 @@ logger = logging.getLogger(__name__)
 
 def run_server(config: MemoryConfig) -> None:
     """Run the MCP server."""
-    logger.info("Initializing MCP server...")
+    logger.info(
+        f"Initializing MCP server: "
+        f"{config.server_name} ({config.engine.value}) -> "
+        + (
+            f"{config.host}:{config.port}"
+            if config.transport == Transport.HTTP
+            else "stdio"
+        )
+    )
+
     mcp = FastMCP(name=config.server_name, instructions=config.instructions)
     engine = get_engine(config)
 
@@ -28,6 +37,11 @@ def run_server(config: MemoryConfig) -> None:
             mcp.run(transport="stdio")
         case Transport.HTTP:
             logger.info(f"Starting MCP server at {config.host}:{config.port}...")
-            mcp.run(transport="http", host=config.host, port=config.port)
+            mcp.run(
+                transport="http",
+                host=config.host,
+                port=config.port,
+                uvicorn_config={"log_config": None},
+            )
         case _:
             raise NotImplementedError(f"Unsupported transport: {config.transport}")

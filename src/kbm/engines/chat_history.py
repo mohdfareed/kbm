@@ -23,9 +23,9 @@ if TYPE_CHECKING:
 class ChatHistoryEngine(EngineProtocol):
     logger = logging.getLogger(__name__)
 
-    def __init__(self, config: "MemoryConfig") -> None:
+    def __init__(self, config: "MemoryConfig", store: CanonicalStore) -> None:
         self.logger.info("Initializing Chat History engine...")
-        self._store = CanonicalStore(config.canonical_url)
+        self._store = store
 
     @property
     def supported_operations(self) -> frozenset[Operation]:

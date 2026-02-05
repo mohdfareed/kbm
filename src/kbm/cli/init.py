@@ -31,7 +31,7 @@ def init(
         config_path = app_settings.memories_path / f"{memory_name}.{ext}"
 
     if config_path.exists() and not force:
-        raise FileExistsError(config_path)
+        raise FileExistsError(f"Config file already exists: {config_path}")
 
     config = MemoryConfig(name=memory_name, file_path=config_path, engine=engine)
     config.data_path.mkdir(parents=True, exist_ok=True)

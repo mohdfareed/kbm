@@ -35,7 +35,9 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def callback(
-    debug: bool = typer.Option(False, "-d", "--debug", help="Enable debug logging."),
+    debug: bool = typer.Option(
+        app_settings.debug, "-d", "--debug", help="Enable debug logging ($KBM_DEBUG)."
+    ),
     version: bool = typer.Option(
         False,
         "-v",
@@ -46,16 +48,15 @@ def callback(
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
-    # Configure logging once
-    if not log.handlers:
-        handler = RichHandler(
-            console=err_console,
-            show_time=debug,
-            show_path=debug,
-            rich_tracebacks=True,
-        )
-        log.addHandler(handler)
-    log.setLevel(logging.DEBUG if debug else logging.WARNING)
+    level = logging.DEBUG if debug else logging.WARNING
+    handler = RichHandler(
+        console=err_console,
+        show_time=debug,
+        show_path=debug,
+        rich_tracebacks=True,
+    )
+    logging.root.setLevel(level)
+    logging.root.addHandler(handler)
 
 
 @app.command()

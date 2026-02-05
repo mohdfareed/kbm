@@ -1,5 +1,6 @@
 """Engine configurations and enums."""
 
+import os
 from enum import Enum
 
 from pydantic import BaseModel
@@ -29,8 +30,8 @@ class RAGAnythingConfig(EngineConfig):
     """RAG-Anything engine configuration."""
 
     # OpenAI settings
-    api_key: str | None = None
-    base_url: str | None = None
+    api_key: str | None = os.environ.get("OPENAI_API_KEY", None)
+    base_url: str | None = os.environ.get("OPENAI_BASE_URL", None)
 
     # Model settings
     llm_model: str = "gpt-4o-mini"

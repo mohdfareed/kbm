@@ -37,10 +37,13 @@ class RAGAnythingEngine(EngineProtocol):
         self.working_dir = config.data_path / "rag-anything"
         self.working_dir.mkdir(parents=True, exist_ok=True)
 
-        self._api_key = os.environ.get("OPENAI_API_KEY", self.config.api_key)
-        self._base_url = os.environ.get("OPENAI_BASE_URL", self.config.base_url)
-        if not self._api_key:
-            raise ValueError("Set OPENAI_API_KEY or rag_anything.api_key")
+        self._api_key = self.config.api_key
+        self._base_url = self.config.base_url
+        if not self.config.api_key:
+            raise ValueError(
+                "RAG-Anything engine API key is missing. "
+                "Set OPENAI_API_KEY or rag_anything.api_key in config."
+            )
 
         self._lightrag: LightRAG | None = None
         self._rag: RAGAnything | None = None

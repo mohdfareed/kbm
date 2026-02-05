@@ -18,7 +18,9 @@ def start(
     ),
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
-    port: int | None = typer.Option(None, "-p", "--port"),
+    port: int | None = typer.Option(
+        None, "-p", "--port", help="Ignored by containers."
+    ),
 ) -> None:
     """Start the MCP server."""
     if name and config:
@@ -36,6 +38,8 @@ def start(
     console.print(f"[bold]{cfg.name}[/bold] [dim]• {cfg.engine.value}[/dim]")
     if cfg.transport == Transport.HTTP:
         console.print(f"[dim]http://{cfg.host}:{cfg.port}[/dim]")
+    if cfg.transport == Transport.STDIO:
+        console.print(f"[dim]stdio transport[/dim]")
     console.print()
 
     run_server(cfg)

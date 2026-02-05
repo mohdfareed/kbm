@@ -12,7 +12,16 @@ from pydantic import BaseModel
 KBM_ENV_BASE = "KBM_"
 
 _KBM_HOME = f"{KBM_ENV_BASE}HOME"
+_KBM_DEBUG = f"{KBM_ENV_BASE}DEBUG"
 _meta = metadata("kbm")
+
+
+def _get_env(key: str) -> str | None:
+    return (
+        dotenv.dotenv_values(".kbm.env").get(key)
+        or dotenv.dotenv_values(".env").get(key)
+        or os.environ.get(key)
+    )
 
 
 class _AppMetadata(BaseModel):
@@ -21,15 +30,14 @@ class _AppMetadata(BaseModel):
     description: str = _meta["Summary"]
 
     @cached_property
+    def debug(self) -> bool:
+        """Debug mode ($KBM_DEBUG)."""
+        return _get_env(_KBM_DEBUG) in ("1", "true", "True")
+
+    @cached_property
     def home(self) -> Path:
         """KBM home directory ($KBM_HOME or platform default)."""
-        env = (
-            dotenv.dotenv_values(".kbm.env").get(_KBM_HOME)
-            or dotenv.dotenv_values(".env").get(_KBM_HOME)
-            or os.environ.get(_KBM_HOME)
-        )
-
-        if env:
+        if env := _get_env(_KBM_HOME):
             return Path(env).expanduser().resolve()
         return Path(typer.get_app_dir(self.name))
 

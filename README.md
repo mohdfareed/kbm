@@ -36,7 +36,7 @@ Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir), never in yo
 kbm <command> [options]
 
 Commands:
-  init [name]     Create memory (local or global)
+  init [name]     Create memory
   start [name]    Start MCP server
   status [name]   Show configuration
   list            List all memories
@@ -62,14 +62,15 @@ Options:
 ## Docker
 
 ```sh
-# Build locally
+# Build
 docker build -t kbm .
 
-# Build from GitHub
-docker build -t kbm https://github.com/mohdfareed/kbm.git
+# Run (auto-creates memory if needed)
+docker run -v kbm-data:/data -p 8000:8000 kbm
+docker run -v kbm-data:/data -p 8000:8000 kbm my-memory  # custom name
 
-# Run with config file and persistent data
-docker run -v ./config.yaml:/config.yaml:ro -v kbm-data:/data -p 8000:8000 kbm
+# Debug logging
+docker run -e KBM_DEBUG=1 -v kbm-data:/data -p 8000:8000 kbm
 ```
 
 **docker-compose.yaml:**
@@ -77,21 +78,16 @@ docker run -v ./config.yaml:/config.yaml:ro -v kbm-data:/data -p 8000:8000 kbm
 ```yaml
 services:
   kbm:
-    build: https://github.com/mohdfareed/kbm.git
+    build: .
     ports:
       - "8000:8000"
     volumes:
-      - ./config.yaml:/config.yaml:ro
       - kbm-data:/data
     environment:
-      - KBM_RAG_ANYTHING__API_KEY=${OPENAI_API_KEY}
+      - KBM_DEBUG=0
 
 volumes:
   kbm-data:
-```
-
-```sh
-docker compose up -d
 ```
 
 ## Development
@@ -109,6 +105,8 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 - `chat-history` - Simple JSON storage for conversations
 - `rag-anything` - Multi-modal RAG with LightRAG
+- `federation` - Aggregates queries across multiple memories
+- `mcp-client` - Connects to remote MCP servers
 
 **Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
 
@@ -117,17 +115,16 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 - Allows rebuilding engine indexes from durable storage
 - Uses async SQLAlchemy with aiosqlite
 
+**Federation** enables querying multiple knowledge bases as one:
+
+- Aggregates results from local memories and remote MCP servers
+- Configures sources via:
+  - `federation.memories` - names of local/global memories,
+  - `federation.configs` - paths to config files, and
+  - `federation.remotes` - MCP server URLs
+- Read-only: can only query remote memories
+
 ## TODO
-
-**Core Features:**
-
-- [ ] **Federation engine (*Scalability*)**: Aggregate multiple memories; support direct config paths (instantiate engine) or server URLs (MCP client); and route requests based on capabilities
-  - Implements `EngineProtocol`
-  - Routes requests to sub-engines based on capabilities
-  - Aggregation strategies (e.g. merge results, round-robin, priority-based)
-  - Allows writing by allowing model to specify target knowledge base
-
-**Future Enhancements:**
 
 - [ ] **Authorization (*Security*)**: Add API key support for HTTP server mode
   - Read/write scopes
@@ -142,7 +139,3 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
     - Automated releases on tags
     - Publish to PyPI
     - Build and publish Docker images to GitHub Container Registry
-- [ ] **Web interface (*Usability*)**: Simple web UI for browsing and managing the knowledge base
-  - Manage app settings, including engine selection
-  - Provide shortcuts to tools for interacting with databases
-  - View usage stats and logs
