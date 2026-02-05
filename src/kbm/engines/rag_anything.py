@@ -95,10 +95,7 @@ class RAGAnythingEngine(EngineProtocol):
         )
 
     async def insert_file(
-        self,
-        file_path: str,
-        content: str | None = None,
-        doc_id: str | None = None,
+        self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
         # Wrapper handles base64 -> file, so we always get a real path
         path = Path(file_path).expanduser().resolve()

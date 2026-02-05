@@ -8,9 +8,7 @@ __all__ = [
     "Attachment",
     "CanonicalStore",
     "Record",
-    "with_canonical",
 ]
 
-from kbm.canonical.models import Attachment, Record
-from kbm.canonical.store import CanonicalStore
-from kbm.canonical.wrapper import with_canonical
+from kbm.store.models import Attachment, Record
+from kbm.store.store import CanonicalStore

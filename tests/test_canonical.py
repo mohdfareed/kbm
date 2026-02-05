@@ -6,9 +6,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from kbm.canonical import Attachment, CanonicalStore, Record, with_canonical
-from kbm.canonical.wrapper import CanonicalEngineWrapper
 from kbm.engine import Operation
+from kbm.engines import with_canonical
+from kbm.engines.canonical import CanonicalEngineWrapper
+from kbm.store import CanonicalStore
 
 
 @pytest.fixture

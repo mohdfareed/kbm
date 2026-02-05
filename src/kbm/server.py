@@ -41,6 +41,7 @@ def run_server(config: MemoryConfig) -> None:
                 transport="http",
                 host=config.host,
                 port=config.port,
+                show_banner=False,
                 uvicorn_config={"log_config": None},
             )
         case _:

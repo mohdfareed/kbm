@@ -6,9 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kbm.canonical import CanonicalStore, with_canonical
 from kbm.engine import EngineProtocol
+from kbm.engines import with_canonical
 from kbm.engines.chat_history import ChatHistoryEngine
+from kbm.store import CanonicalStore
 
 
 @pytest.fixture

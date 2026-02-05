@@ -5,7 +5,6 @@ __all__ = ["ChatHistoryEngine"]
 import logging
 from typing import TYPE_CHECKING
 
-from kbm.canonical import CanonicalStore
 from kbm.engine import EngineProtocol, Operation
 from kbm.models import (
     DeleteResponse,
@@ -15,6 +14,7 @@ from kbm.models import (
     QueryResponse,
     QueryResult,
 )
+from kbm.store import CanonicalStore
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
@@ -49,10 +49,7 @@ class ChatHistoryEngine(EngineProtocol):
         raise NotImplementedError("Handled by canonical layer.")
 
     async def insert_file(
-        self,
-        file_path: str,
-        content: str | None = None,
-        doc_id: str | None = None,
+        self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
         raise NotImplementedError("Handled by canonical layer.")
 

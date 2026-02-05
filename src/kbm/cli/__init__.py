@@ -48,7 +48,7 @@ def callback(
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
-    level = logging.DEBUG if debug else logging.WARNING
+    level = logging.DEBUG if debug else logging.INFO
     handler = RichHandler(
         console=err_console,
         show_time=debug,

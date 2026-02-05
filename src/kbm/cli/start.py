@@ -1,5 +1,6 @@
 """Start command."""
 
+import logging
 from pathlib import Path
 
 import typer
@@ -8,6 +9,8 @@ from kbm.config import MemoryConfig, Transport
 from kbm.server import run_server
 
 from . import app, console
+
+logger = logging.getLogger(__name__)
 
 
 @app.command()
@@ -42,4 +45,5 @@ def start(
         console.print(f"[dim]stdio transport[/dim]")
     console.print()
 
+    logger.info(f"Starting memory server: {cfg}")
     run_server(cfg)

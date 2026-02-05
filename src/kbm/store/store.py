@@ -8,10 +8,10 @@ import logging
 import uuid
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from kbm.canonical.models import Attachment, Base, Record
+from kbm.store.models import Attachment, Base, Record
 
 
 class CanonicalStore:
@@ -132,12 +132,21 @@ class CanonicalStore:
             return result.scalar() or 0
 
     async def search_records(self, query: str, limit: int = 10) -> list[Record]:
-        """Simple text search in content."""
+        """Text search in content and source (includes filenames for uploads)."""
         await self._ensure_tables()
         self.logger.debug(f"Searching records with query: {query}, limit: {limit}")
 
         async with self._session_factory() as session:
-            stmt = select(Record).where(Record.content.contains(query)).limit(limit)
+            stmt = (
+                select(Record)
+                .where(
+                    or_(
+                        Record.content.contains(query),
+                        Record.source.contains(query),
+                    )
+                )
+                .limit(limit)
+            )
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
@@ -188,6 +197,21 @@ class CanonicalStore:
 
         return aid
 
+    def resolve_file(self, file_path: str, content: str | None = None) -> Path:
+        """Resolve a file reference to a local path.
+
+        Args:
+            file_path: Local path to file, OR filename when content is provided.
+            content: Base64-encoded file data. If provided, file_path is the filename.
+
+        Returns:
+            Resolved Path (saved to uploads/ if base64 content provided).
+        """
+        if content:
+            data = base64.b64decode(content)
+            return self._save_upload(file_path, data)
+        return Path(file_path).expanduser().resolve()
+
     async def insert_file(
         self,
         file_path: str,
@@ -204,14 +228,8 @@ class CanonicalStore:
         Returns:
             Tuple of (record_id, resolved_path).
         """
-        # Decode base64 or resolve local path
-        if content:
-            data = base64.b64decode(content)
-            path = self._save_upload(file_path, data)
-            source = f"upload:{file_path}"
-        else:
-            path = Path(file_path).expanduser().resolve()
-            source = str(path)
+        path = self.resolve_file(file_path, content)
+        source = f"upload:{file_path}" if content else str(path)
 
         # Create record and attachment
         rid = await self.insert_record(

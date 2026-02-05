@@ -41,6 +41,12 @@ class MCPClientEngine(EngineProtocol):
             # Try to parse structured response, fallback to basic
             if isinstance(result.data, dict):
                 return InfoResponse(**result.data)
+
+            self.logger.warning(
+                "Received unstructured info response from remote MCP server: "
+                f"{self._url}"
+            )
+
             return InfoResponse(
                 engine="remote",
                 records=0,
@@ -58,7 +64,11 @@ class MCPClientEngine(EngineProtocol):
             if isinstance(result.data, dict) and "results" in result.data:
                 return QueryResponse(**result.data)
 
-            # Fallback: wrap raw response as single result
+            self.logger.warning(
+                "Received unstructured query response from remote MCP server: "
+                f"{self._url}"
+            )
+
             return QueryResponse(
                 results=[
                     QueryResult(
@@ -77,10 +87,7 @@ class MCPClientEngine(EngineProtocol):
         raise NotImplementedError("Remote insert not supported")
 
     async def insert_file(
-        self,
-        file_path: str,
-        content: str | None = None,
-        doc_id: str | None = None,
+        self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
         raise NotImplementedError("Remote insert_file not supported")
 

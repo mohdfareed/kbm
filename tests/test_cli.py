@@ -137,6 +137,130 @@ class TestList:
         assert "local" in result.stdout.lower()
 
 
+class TestStart:
+    """Test 'kbm start' command."""
+
+    def test_starts_server_with_name(
+        self, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Starts server for named memory."""
+        runner.invoke(app, ["init", "start-test"])
+
+        # Mock run_server to avoid blocking
+        started_config = None
+
+        def mock_run_server(config):
+            nonlocal started_config
+            started_config = config
+
+        monkeypatch.setattr("kbm.cli.start.run_server", mock_run_server)
+
+        result = runner.invoke(app, ["start", "start-test"])
+        assert result.exit_code == 0
+        assert started_config is not None
+        assert started_config.name == "start-test"
+
+    def test_starts_server_with_local_config(
+        self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Starts server for local config when no name given."""
+        monkeypatch.chdir(tmp_path)
+        runner.invoke(app, ["init", "--local"])
+
+        started_config = None
+
+        def mock_run_server(config):
+            nonlocal started_config
+            started_config = config
+
+        monkeypatch.setattr("kbm.cli.start.run_server", mock_run_server)
+
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code == 0
+        assert started_config is not None
+        assert started_config.name == tmp_path.name
+
+    def test_starts_with_config_flag(
+        self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--config uses explicit path."""
+        config = tmp_path / "custom.yaml"
+        config.write_text("name: custom-server\nengine: chat-history\n")
+
+        started_config = None
+
+        def mock_run_server(config):
+            nonlocal started_config
+            started_config = config
+
+        monkeypatch.setattr("kbm.cli.start.run_server", mock_run_server)
+
+        result = runner.invoke(app, ["start", "--config", str(config)])
+        assert result.exit_code == 0
+        assert started_config is not None
+        assert started_config.name == "custom-server"
+
+    def test_transport_override(
+        self, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--transport overrides config."""
+        runner.invoke(app, ["init", "transport-test"])
+
+        started_config = None
+
+        def mock_run_server(config):
+            nonlocal started_config
+            started_config = config
+
+        monkeypatch.setattr("kbm.cli.start.run_server", mock_run_server)
+
+        result = runner.invoke(app, ["start", "transport-test", "-t", "http"])
+        assert result.exit_code == 0
+        assert started_config is not None
+        assert started_config.transport.value == "http"
+
+    def test_host_port_override(
+        self, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--host and --port override config."""
+        runner.invoke(app, ["init", "hostport-test"])
+
+        started_config = None
+
+        def mock_run_server(config):
+            nonlocal started_config
+            started_config = config
+
+        monkeypatch.setattr("kbm.cli.start.run_server", mock_run_server)
+
+        result = runner.invoke(
+            app, ["start", "hostport-test", "-H", "192.168.1.1", "-p", "9000"]
+        )
+        assert result.exit_code == 0
+        assert started_config is not None
+        assert started_config.host == "192.168.1.1"
+        assert started_config.port == 9000
+
+    def test_fails_with_both_name_and_config(
+        self, tmp_path: Path, tmp_home: Path
+    ) -> None:
+        """Fails if both name and --config are given."""
+        config = tmp_path / "test.yaml"
+        config.write_text("name: test\nengine: chat-history\n")
+
+        result = runner.invoke(app, ["start", "some-name", "--config", str(config)])
+        assert result.exit_code != 0
+
+    def test_fails_without_config(
+        self, tmp_path: Path, tmp_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fails when no config found."""
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["start"])
+        assert result.exit_code != 0
+
+
 class TestStatus:
     """Test 'kbm status' command."""
 

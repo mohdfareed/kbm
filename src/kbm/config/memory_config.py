@@ -78,12 +78,10 @@ class MemoryConfig(AppConfig):
     def from_name(cls, name: str | None) -> "MemoryConfig":
         if name is None:
             local_files = app_settings.local_config_files()
-            if len(local_files) == 1:
+            if len(local_files) > 0:
                 return cls.from_config(local_files[0])
 
-            raise FileNotFoundError(
-                "No memory specified and no unique local memory found."
-            )
+            raise FileNotFoundError("No memory specified and no local memory found.")
 
         for config in app_settings.local_config_files():
             cfg = cls.from_config(config)

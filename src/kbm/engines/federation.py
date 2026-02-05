@@ -5,9 +5,11 @@ __all__ = ["FederationEngine"]
 import asyncio
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from kbm.config import MemoryConfig
 from kbm.engine import EngineProtocol, Operation
+from kbm.engines import get_engine
+from kbm.engines.mcp_client import MCPClientEngine
 from kbm.models import (
     DeleteResponse,
     InfoResponse,
@@ -17,19 +19,12 @@ from kbm.models import (
     QueryResult,
 )
 
-if TYPE_CHECKING:
-    from kbm.config import MemoryConfig
-
 
 class FederationEngine(EngineProtocol):
     logger = logging.getLogger(__name__)
 
     def __init__(self, config: "MemoryConfig") -> None:
         self.logger.info("Initializing Federation engine...")
-        from kbm.config import MemoryConfig
-        from kbm.engines import get_engine
-        from kbm.engines.mcp_client import MCPClientEngine
-
         self._sources: list[tuple[str, EngineProtocol]] = []
 
         # Load from memory names
@@ -103,10 +98,7 @@ class FederationEngine(EngineProtocol):
         raise NotImplementedError("Federation is read-only")
 
     async def insert_file(
-        self,
-        file_path: str,
-        content: str | None = None,
-        doc_id: str | None = None,
+        self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
         raise NotImplementedError("Federation is read-only")
 

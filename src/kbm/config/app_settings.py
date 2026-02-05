@@ -57,7 +57,7 @@ class _AppMetadata(BaseModel):
 
     def local_config_files(self) -> list[Path]:
         """List of local memory config files in current directory."""
-        return sorted([f for f in Path.cwd().glob(".kbm*") if f.is_file()])
+        return sorted([f for f in Path.cwd().glob(".kbm.*") if f.is_file()])
 
 
 app_settings = _AppMetadata()

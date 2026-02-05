@@ -2,14 +2,24 @@
 
 __all__ = ["get_engine"]
 
+import logging
 from typing import TYPE_CHECKING
 
-from kbm.canonical import CanonicalStore, with_canonical
 from kbm.config import Engine
 from kbm.engine import EngineProtocol
+from kbm.store import CanonicalStore
 
 if TYPE_CHECKING:
     from kbm.config import MemoryConfig
+
+
+def with_canonical(store: CanonicalStore, engine: EngineProtocol) -> EngineProtocol:
+    """Wrap engine with canonical storage."""
+    from kbm.engines.canonical import CanonicalEngineWrapper
+
+    return CanonicalEngineWrapper(
+        engine, store, logger=logging.getLogger(engine.__class__.__name__)
+    )
 
 
 def get_engine(config: "MemoryConfig") -> EngineProtocol:
@@ -20,15 +30,12 @@ def get_engine(config: "MemoryConfig") -> EngineProtocol:
         case Engine.CHAT_HISTORY:
             from kbm.engines.chat_history import ChatHistoryEngine
 
-            engine = ChatHistoryEngine(config, store)
+            return with_canonical(store, ChatHistoryEngine(config, store))
         case Engine.RAG_ANYTHING:
             from kbm.engines.rag_anything import RAGAnythingEngine
 
-            engine = RAGAnythingEngine(config)
+            return with_canonical(store, RAGAnythingEngine(config))
         case Engine.FEDERATION:
             from kbm.engines.federation import FederationEngine
 
             return FederationEngine(config)  # No canonical wrap
-
-    # Wrap with canonical storage for durability
-    return with_canonical(store, engine)

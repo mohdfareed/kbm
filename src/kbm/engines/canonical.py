@@ -1,11 +1,9 @@
 """Engine wrapper for canonical persistence."""
 
-__all__ = ["CanonicalEngineWrapper", "with_canonical"]
+__all__ = ["CanonicalEngineWrapper"]
 
 import logging
-from typing import TYPE_CHECKING
 
-from kbm.canonical.store import CanonicalStore
 from kbm.engine import EngineProtocol, Operation
 from kbm.models import (
     DeleteResponse,
@@ -15,9 +13,7 @@ from kbm.models import (
     QueryResponse,
     RecordSummary,
 )
-
-if TYPE_CHECKING:
-    from kbm.config import MemoryConfig
+from kbm.store.store import CanonicalStore
 
 
 class CanonicalEngineWrapper(EngineProtocol):
@@ -71,10 +67,7 @@ class CanonicalEngineWrapper(EngineProtocol):
         return InsertResponse(id=rid)
 
     async def insert_file(
-        self,
-        file_path: str,
-        content: str | None = None,
-        doc_id: str | None = None,
+        self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
         rid, path = await self._store.insert_file(file_path, content, doc_id)
 
@@ -121,10 +114,3 @@ class CanonicalEngineWrapper(EngineProtocol):
         ]
 
         return ListResponse(records=summaries, total=total, limit=limit, offset=offset)
-
-
-def with_canonical(store: CanonicalStore, engine: EngineProtocol) -> EngineProtocol:
-    """Wrap engine with canonical storage."""
-    return CanonicalEngineWrapper(
-        engine, store, logger=logging.getLogger(engine.__class__.__name__)
-    )

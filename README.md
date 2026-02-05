@@ -127,7 +127,6 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## TODO
 
-- [ ] **Attachments**: Support passing images/docs to `query` for enhanced context
 - [ ] **Authorization (*Security*)**: Add API key support for HTTP server mode
   - Read/write scopes
   - API key generation and management commands
