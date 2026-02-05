@@ -103,7 +103,10 @@ class FederationEngine(EngineProtocol):
         raise NotImplementedError("Federation is read-only")
 
     async def insert_file(
-        self, file_path: str, doc_id: str | None = None
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
     ) -> InsertResponse:
         raise NotImplementedError("Federation is read-only")
 

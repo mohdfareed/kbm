@@ -2,6 +2,8 @@
 
 __all__ = ["CanonicalStore"]
 
+import base64
+import hashlib
 import logging
 import uuid
 from pathlib import Path
@@ -17,10 +19,11 @@ class CanonicalStore:
 
     logger = logging.getLogger(__name__)
 
-    def __init__(self, database_url: str) -> None:
+    def __init__(self, database_url: str, uploads_path: Path | None = None) -> None:
         self.logger.info(f"Initializing CanonicalStore with URL: {database_url}")
 
         self._url = database_url
+        self._uploads_path = uploads_path
         if self._url.startswith("sqlite"):
             # Extract path from sqlite+aiosqlite:///path/to/db
             path = self._url.split("///", 1)[-1]
@@ -138,15 +141,34 @@ class CanonicalStore:
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def insert_attachment(
+    def _save_upload(self, filename: str, data: bytes) -> Path:
+        """Save uploaded file to persistent storage, return path."""
+        if not self._uploads_path:
+            raise ValueError("uploads_path not configured")
+        self._uploads_path.mkdir(parents=True, exist_ok=True)
+
+        # Hash content for deduplication
+        content_hash = hashlib.sha256(data).hexdigest()[:16]
+        # Preserve extension for mime type detection
+        ext = Path(filename).suffix
+        safe_name = f"{content_hash}{ext}"
+        path = self._uploads_path / safe_name
+
+        # Only write if not already exists (deduplication)
+        if not path.exists():
+            path.write_bytes(data)
+            self.logger.debug(f"Saved upload: {path}")
+        else:
+            self.logger.debug(f"Upload already exists: {path}")
+
+        return path
+
+    async def _insert_attachment(
         self,
         record_id: str,
-        file_name: str,
-        file_path: str,
-        mime_type: str | None = None,
-        size_bytes: int | None = None,
+        path: Path,
     ) -> str:
-        """Insert an attachment for a record."""
+        """Insert an attachment record for a file."""
         await self._ensure_tables()
         self.logger.debug(f"Inserting attachment for record ID: {record_id}")
 
@@ -155,16 +177,52 @@ class CanonicalStore:
             attachment = Attachment(
                 id=aid,
                 record_id=record_id,
-                file_name=file_name,
-                file_path=file_path,
-                mime_type=mime_type,
-                size_bytes=size_bytes,
+                file_name=path.name,
+                file_path=str(path),
+                mime_type=None,
+                size_bytes=path.stat().st_size if path.exists() else None,
             )
 
             session.add(attachment)
             await session.commit()
 
         return aid
+
+    async def insert_file(
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
+    ) -> tuple[str, Path]:
+        """Insert a file into canonical storage.
+
+        Args:
+            file_path: Local path to file, OR filename when content is provided.
+            content: Base64-encoded file data. If provided, file_path is the filename.
+            doc_id: Optional custom ID. Auto-generated if not provided.
+
+        Returns:
+            Tuple of (record_id, resolved_path).
+        """
+        # Decode base64 or resolve local path
+        if content:
+            data = base64.b64decode(content)
+            path = self._save_upload(file_path, data)
+            source = f"upload:{file_path}"
+        else:
+            path = Path(file_path).expanduser().resolve()
+            source = str(path)
+
+        # Create record and attachment
+        rid = await self.insert_record(
+            content=str(path),
+            doc_id=doc_id,
+            content_type="file_ref",
+            source=source,
+        )
+        await self._insert_attachment(rid, path)
+
+        return rid, path
 
     async def get_attachments(self, record_id: str) -> list[Attachment]:
         """Get all attachments for a record."""

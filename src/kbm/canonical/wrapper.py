@@ -3,7 +3,6 @@
 __all__ = ["CanonicalEngineWrapper", "with_canonical"]
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from kbm.canonical.store import CanonicalStore
@@ -72,27 +71,16 @@ class CanonicalEngineWrapper(EngineProtocol):
         return InsertResponse(id=rid)
 
     async def insert_file(
-        self, file_path: str, doc_id: str | None = None
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
     ) -> InsertResponse:
-        path = Path(file_path).expanduser().resolve()
-        rid = await self._store.insert_record(
-            content=str(path),
-            doc_id=doc_id,
-            content_type="file_ref",
-            source=str(path),
-        )
-
-        await self._store.insert_attachment(
-            record_id=rid,
-            file_name=path.name,
-            file_path=str(path),
-            mime_type=None,
-            size_bytes=path.stat().st_size if path.exists() else None,
-        )
+        rid, path = await self._store.insert_file(file_path, content, doc_id)
 
         if Operation.INSERT_FILE in self._engine_ops:
             try:
-                return await self._engine.insert_file(file_path, rid)
+                return await self._engine.insert_file(str(path), doc_id=rid)
             except Exception as e:
                 self._logger.error(f"Error inserting file into engine: {e}")
         return InsertResponse(id=rid, message="Stored")

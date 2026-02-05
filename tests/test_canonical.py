@@ -15,7 +15,8 @@ from kbm.engine import Operation
 async def store(tmp_path: Path) -> AsyncGenerator[CanonicalStore, None]:
     """Create a canonical store with temp database."""
     db_path = tmp_path / "canonical.db"
-    s = CanonicalStore(f"sqlite+aiosqlite:///{db_path}")
+    uploads_path = tmp_path / "uploads"
+    s = CanonicalStore(f"sqlite+aiosqlite:///{db_path}", uploads_path=uploads_path)
     yield s
     await s.close()
 
@@ -112,33 +113,57 @@ class TestCanonicalStore:
 class TestAttachments:
     """Attachment operations."""
 
-    async def test_insert_attachment(self, store: CanonicalStore) -> None:
-        """Insert attachment returns ID."""
-        rid = await store.insert_record("test", doc_id="r1")
-        aid = await store.insert_attachment(
-            record_id=rid,
-            file_name="test.txt",
-            file_path="/path/to/test.txt",
-            mime_type="text/plain",
-            size_bytes=100,
-        )
-        assert aid
-        assert len(aid) == 36
+    async def test_insert_file_local(
+        self, store: CanonicalStore, tmp_path: Path
+    ) -> None:
+        """Insert file from local path creates record and attachment."""
+        # Create a test file
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("hello world")
 
-    async def test_get_attachments(self, store: CanonicalStore) -> None:
-        """Get attachments returns all for record."""
-        rid = await store.insert_record("test", doc_id="r1")
-        await store.insert_attachment(
-            record_id=rid, file_name="a.txt", file_path="/a.txt"
-        )
-        await store.insert_attachment(
-            record_id=rid, file_name="b.txt", file_path="/b.txt"
-        )
+        rid, path = await store.insert_file(str(test_file))
 
+        assert rid
+        assert path == test_file.resolve()
+
+        # Check attachment was created
         attachments = await store.get_attachments(rid)
-        assert len(attachments) == 2
-        names = {a.file_name for a in attachments}
-        assert names == {"a.txt", "b.txt"}
+        assert len(attachments) == 1
+        assert attachments[0].file_name == "test.txt"
+
+    async def test_insert_file_base64(self, store: CanonicalStore) -> None:
+        """Insert file from base64 content creates record and attachment."""
+        import base64
+
+        content = base64.b64encode(b"hello world").decode()
+        rid, path = await store.insert_file("test.txt", content=content)
+
+        assert rid
+        assert path.name.endswith(".txt")
+        assert path.read_bytes() == b"hello world"
+
+        # Check attachment was created
+        attachments = await store.get_attachments(rid)
+        assert len(attachments) == 1
+
+    async def test_get_attachments(self, store: CanonicalStore, tmp_path: Path) -> None:
+        """Get attachments returns all for record."""
+        # Create test files
+        file_a = tmp_path / "a.txt"
+        file_b = tmp_path / "b.txt"
+        file_a.write_text("a")
+        file_b.write_text("b")
+
+        rid_a, _ = await store.insert_file(str(file_a), doc_id="r1")
+        rid_b, _ = await store.insert_file(str(file_b), doc_id="r2")
+
+        attachments_a = await store.get_attachments(rid_a)
+        attachments_b = await store.get_attachments(rid_b)
+
+        assert len(attachments_a) == 1
+        assert len(attachments_b) == 1
+        assert attachments_a[0].file_name == "a.txt"
+        assert attachments_b[0].file_name == "b.txt"
 
 
 class TestCanonicalWrapper:

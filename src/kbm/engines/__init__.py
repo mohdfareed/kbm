@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 def get_engine(config: "MemoryConfig") -> EngineProtocol:
     """Get engine instance for config, wrapped with canonical storage."""
-    store = CanonicalStore(config.canonical_url)
+    store = CanonicalStore(config.canonical_url, uploads_path=config.uploads_path)
 
     match config.engine:
         case Engine.CHAT_HISTORY:

@@ -1,8 +1,12 @@
-"""MCP client engine - connects to remote MCP servers."""
+"""MCP client engine - connects to remote MCP servers.
+
+This is used by federation engines to query remote memories.
+"""
 
 __all__ = ["MCPClientEngine"]
 
 import logging
+from datetime import datetime
 
 from fastmcp import Client
 
@@ -55,8 +59,6 @@ class MCPClientEngine(EngineProtocol):
                 return QueryResponse(**result.data)
 
             # Fallback: wrap raw response as single result
-            from datetime import datetime
-
             return QueryResponse(
                 results=[
                     QueryResult(
@@ -75,7 +77,10 @@ class MCPClientEngine(EngineProtocol):
         raise NotImplementedError("Remote insert not supported")
 
     async def insert_file(
-        self, file_path: str, doc_id: str | None = None
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
     ) -> InsertResponse:
         raise NotImplementedError("Remote insert_file not supported")
 

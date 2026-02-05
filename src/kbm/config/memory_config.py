@@ -59,6 +59,12 @@ class MemoryConfig(AppConfig):
 
     @computed_field
     @property
+    def uploads_path(self) -> Path:
+        """Directory for uploaded file attachments."""
+        return self.data_path / "uploads"
+
+    @computed_field
+    @property
     def canonical_url(self) -> str:
         """Database URL for canonical storage."""
         if self.canonical.database_url:

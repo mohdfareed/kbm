@@ -29,6 +29,7 @@ engine: chat-history  # or rag-anything
 Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
 
 Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir), never in your repo.
+Backup by copying this directory.
 
 ## CLI
 
@@ -50,14 +51,14 @@ Options:
 
 ## MCP Tools
 
-| Tool           | Description                |
-| -------------- | -------------------------- |
-| `query`        | Search knowledge base      |
-| `insert`       | Add text                   |
-| `insert_file`  | Add file (PDF, image, etc) |
-| `delete`       | Remove record              |
-| `list_records` | List records               |
-| `info`         | Knowledge base metadata    |
+| Tool           | Description                       |
+| -------------- | --------------------------------- |
+| `query`        | Search knowledge base             |
+| `insert`       | Add text                          |
+| `insert_file`  | Add file (path or base64 content) |
+| `delete`       | Remove record                     |
+| `list_records` | List records                      |
+| `info`         | Knowledge base metadata           |
 
 ## Docker
 
@@ -101,12 +102,12 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## Architecture
 
-**Engines** provide different retrieval strategies:
+**Engines** provide different retrieval strategies. Use `chat-history` for lightweight text storage,
+`rag-anything` for semantic search over documents/images:
 
 - `chat-history` - Simple JSON storage for conversations
 - `rag-anything` - Multi-modal RAG with LightRAG
-- `federation` - Aggregates queries across multiple memories
-- `mcp-client` - Connects to remote MCP servers
+- `federation` - Aggregates queries across multiple memories, local and remote
 
 **Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
 
@@ -126,6 +127,7 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## TODO
 
+- [ ] **Attachments**: Support passing images/docs to `query` for enhanced context
 - [ ] **Authorization (*Security*)**: Add API key support for HTTP server mode
   - Read/write scopes
   - API key generation and management commands

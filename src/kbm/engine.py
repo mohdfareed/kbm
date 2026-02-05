@@ -65,14 +65,18 @@ class EngineProtocol(Protocol):
         ...
 
     async def insert_file(
-        self, file_path: str, doc_id: str | None = None
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
     ) -> "InsertResponse":
         """Add a file to the knowledge base.
 
         Supports PDF, images, and other document formats depending on engine.
 
         Args:
-            file_path: Path to the file to ingest.
+            file_path: Local path to file, OR filename when content is provided.
+            content: Base64-encoded file data. If provided, file_path is the filename.
             doc_id: Optional custom ID. Auto-generated if not provided.
         """
         ...

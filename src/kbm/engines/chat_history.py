@@ -49,7 +49,10 @@ class ChatHistoryEngine(EngineProtocol):
         raise NotImplementedError("Handled by canonical layer.")
 
     async def insert_file(
-        self, file_path: str, doc_id: str | None = None
+        self,
+        file_path: str,
+        content: str | None = None,
+        doc_id: str | None = None,
     ) -> InsertResponse:
         raise NotImplementedError("Handled by canonical layer.")
 
