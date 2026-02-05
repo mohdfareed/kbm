@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kbm.canonical import with_canonical
+from kbm.canonical import CanonicalStore, with_canonical
 from kbm.engine import EngineProtocol
 from kbm.engines.chat_history import ChatHistoryEngine
 
@@ -17,8 +17,9 @@ async def engine(tmp_path: Path) -> AsyncGenerator[EngineProtocol, None]:
     config = MagicMock()
     config.canonical_url = f"sqlite+aiosqlite:///{tmp_path / 'canonical.db'}"
 
-    raw_engine = ChatHistoryEngine(config)
-    wrapped = with_canonical(config, raw_engine)
+    store = CanonicalStore(config.canonical_url)
+    raw_engine = ChatHistoryEngine(config, store)
+    wrapped = with_canonical(store, raw_engine)
     yield wrapped
 
     # Cleanup - close the store

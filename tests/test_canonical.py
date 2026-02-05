@@ -147,18 +147,27 @@ class TestCanonicalWrapper:
     @pytest.fixture
     def mock_engine(self) -> MagicMock:
         """Create a mock engine with async methods."""
-        from kbm.models import QueryResponse
+        from kbm.models import DeleteResponse, InsertResponse, QueryResponse
 
         engine = MagicMock()
         engine.supported_operations = frozenset(
             {Operation.INSERT, Operation.QUERY, Operation.DELETE}
         )
+
         # Make methods async-compatible with proper return types
-        engine.insert = AsyncMock(return_value="inserted")
+        def insert_side_effect(
+            content: str, doc_id: str | None = None
+        ) -> InsertResponse:
+            return InsertResponse(id=doc_id or "generated-id", message="Inserted")
+
+        def delete_side_effect(record_id: str) -> DeleteResponse:
+            return DeleteResponse(id=record_id, found=True, message="Deleted")
+
+        engine.insert = AsyncMock(side_effect=insert_side_effect)
         engine.query = AsyncMock(
             return_value=QueryResponse(results=[], query="", total=0)
         )
-        engine.delete = AsyncMock(return_value="deleted")
+        engine.delete = AsyncMock(side_effect=delete_side_effect)
         return engine
 
     @pytest.fixture
