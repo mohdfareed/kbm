@@ -13,7 +13,7 @@ from kbm.models import (
     QueryResponse,
     RecordSummary,
 )
-from kbm.store.store import CanonicalStore
+from kbm.store.canonical import CanonicalStore
 
 
 class CanonicalEngineWrapper(EngineProtocol):
@@ -42,6 +42,8 @@ class CanonicalEngineWrapper(EngineProtocol):
         return self._engine_ops | canonical_ops
 
     async def info(self) -> InfoResponse:
+        self._logger.debug("Fetching engine info...")
+
         try:
             return await self._engine.info()
         except Exception as e:
@@ -51,6 +53,8 @@ class CanonicalEngineWrapper(EngineProtocol):
         return InfoResponse(engine="unknown", records=count)
 
     async def query(self, query: str, top_k: int = 10) -> QueryResponse:
+        self._logger.debug(f"Querying engine with query: {query}")
+
         try:
             return await self._engine.query(query, top_k)
         except Exception as e:
@@ -58,7 +62,9 @@ class CanonicalEngineWrapper(EngineProtocol):
             return QueryResponse(results=[], query=query, total=0)
 
     async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
+        self._logger.debug("Inserting record with ID: {doc_id}")
         rid = await self._store.insert_record(content, doc_id)
+
         if Operation.INSERT in self._engine_ops:
             try:
                 return await self._engine.insert(content, rid)
@@ -69,6 +75,7 @@ class CanonicalEngineWrapper(EngineProtocol):
     async def insert_file(
         self, file_path: str, content: str | None = None, doc_id: str | None = None
     ) -> InsertResponse:
+        self._logger.debug(f"Inserting file with ID: {doc_id}")
         rid, path = await self._store.insert_file(file_path, content, doc_id)
 
         if Operation.INSERT_FILE in self._engine_ops:
@@ -79,6 +86,7 @@ class CanonicalEngineWrapper(EngineProtocol):
         return InsertResponse(id=rid, message="Stored")
 
     async def delete(self, record_id: str) -> DeleteResponse:
+        self._logger.debug(f"Deleting record with ID: {record_id}")
         found = await self._store.delete_record(record_id)
 
         if Operation.DELETE in self._engine_ops:
@@ -94,6 +102,8 @@ class CanonicalEngineWrapper(EngineProtocol):
         )
 
     async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
+        self._logger.debug(f"Listing records with limit={limit}, offset={offset}")
+
         if Operation.LIST_RECORDS in self._engine_ops:
             try:
                 return await self._engine.list_records(limit, offset)

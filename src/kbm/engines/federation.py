@@ -52,11 +52,13 @@ class FederationEngine(EngineProtocol):
         return frozenset({Operation.INFO, Operation.QUERY})
 
     async def info(self) -> InfoResponse:
+        self.logger.debug("Fetching info from federated sources...")
+
         total_records = 0
         metadata: dict[str, str] = {}
-
         for name, engine in self._sources:
             self.logger.debug(f"Fetching info from federated source: {name}")
+
             try:
                 info = await engine.info()
                 total_records += info.records
@@ -80,6 +82,7 @@ class FederationEngine(EngineProtocol):
         for (name, _), result in zip(self._sources, results):
             if isinstance(result, BaseException):
                 self.logger.error(f"Error querying {name}: {result}")
+
             elif isinstance(result, QueryResponse):
                 # Prefix IDs with source name for disambiguation
                 for r in result.results:

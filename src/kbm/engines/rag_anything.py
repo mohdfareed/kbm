@@ -39,6 +39,7 @@ class RAGAnythingEngine(EngineProtocol):
 
         self._api_key = self.config.api_key
         self._base_url = self.config.base_url
+
         if not self.config.api_key:
             raise ValueError(
                 "RAG-Anything engine API key is missing. "

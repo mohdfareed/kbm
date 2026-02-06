@@ -54,9 +54,21 @@ def callback(
         show_time=debug,
         show_path=debug,
         rich_tracebacks=True,
+        markup=True,
+        keywords=[],  # Highlight keywords
     )
+    handler.setFormatter(logging.Formatter("[dim]%(name)s:[/dim] %(message)s"))
+
     logging.root.setLevel(level)
     logging.root.addHandler(handler)
+    app_settings.debug = debug
+
+    # Logging levels for libraries
+    logging.getLogger("fastmcp").handlers = [handler]
+    logging.getLogger("mcp").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("fastmcp").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
 
 
 @app.command()
@@ -69,18 +81,12 @@ def main(prog_name: str | None = None) -> None:
     """Entry point."""
     try:
         app(prog_name=prog_name)
-    except KeyboardInterrupt:
-        err_console.print("[dim]Interrupted[/dim]")
-        sys.exit(130)
-    except typer.Abort:
-        err_console.print("[yellow]Aborted[/yellow]")
-        sys.exit(1)
     except Exception as e:
-        if log.level == logging.DEBUG:
+        if app_settings.debug:
             err_console.print_exception()
         else:
-            err_console.print(f"[red]Error:[/red] {e}")
-        sys.exit(1)
+            err_console.print(f"[bold red]Error:[/] {e}")
+        raise sys.exit(1)
 
 
 # Register commands (order determines help display)

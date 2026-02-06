@@ -20,7 +20,7 @@ class CanonicalStore:
     logger = logging.getLogger(__name__)
 
     def __init__(self, database_url: str, uploads_path: Path | None = None) -> None:
-        self.logger.info(f"Initializing CanonicalStore with URL: {database_url}")
+        self.logger.info(f"Initializing canonical data store...")
 
         self._url = database_url
         self._uploads_path = uploads_path
@@ -28,6 +28,7 @@ class CanonicalStore:
             # Extract path from sqlite+aiosqlite:///path/to/db
             path = self._url.split("///", 1)[-1]
             Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.logger.debug(f"Canonical data store URL: {self._url}")
 
         self._initialized = False
         self._engine = create_async_engine(database_url, echo=False)

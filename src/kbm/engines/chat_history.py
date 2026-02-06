@@ -32,12 +32,10 @@ class ChatHistoryEngine(EngineProtocol):
         return frozenset({Operation.INFO, Operation.QUERY})
 
     async def info(self) -> InfoResponse:
-        self.logger.debug("Fetching chat history info...")
         count = await self._store.count_records()
         return InfoResponse(engine="chat-history", records=count)
 
     async def query(self, query: str, top_k: int = 10) -> QueryResponse:
-        self.logger.debug(f"Searching chat history with query: {query}")
         records = await self._store.search_records(query, top_k)
         results = [
             QueryResult(id=r.id, content=r.content, created_at=r.created_at)

@@ -10,5 +10,5 @@ __all__ = [
     "Record",
 ]
 
+from kbm.store.canonical import CanonicalStore
 from kbm.store.models import Attachment, Record
-from kbm.store.store import CanonicalStore
