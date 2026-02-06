@@ -3,7 +3,7 @@ RUN pip install uv
 
 # Install in system python
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY LICENSE pyproject.toml README.md uv.lock ./
 COPY src ./src
 RUN uv pip install --system .
 

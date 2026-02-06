@@ -3,6 +3,7 @@ name = "kbm"
 version = "0.1.0"
 description = "Persistent memory for LLMs, accessible via MCP."
 readme = "README.md"
+license-files = ["LICENSE*"]
 
 # MARK: - Dependencies
 

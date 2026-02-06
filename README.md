@@ -27,51 +27,39 @@ engine: chat-history  # or rag-anything
 ```
 
 Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
-
-Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir), never in your repo.
+Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir).
 Backup by copying this directory.
 
-## CLI
+## Features
 
-```
-kbm <command> [options]
+**Engines** provide different retrieval strategies:
 
-Commands:
-  init [name]     Create memory
-  start [name]    Start MCP server
-  status [name]   Show configuration
-  list            List all memories
-  delete <name>   Delete global memory
+- `chat-history` - Simple JSON storage for conversations
+- `rag-anything` - Multi-modal RAG with LightRAG
+- `federation` - Aggregates queries across multiple memories, local and remote
 
-Options:
-  -c, --config    Config file path
-  -d, --debug     Debug logging
-  -v, --version   Show version
-```
+**Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
 
-## MCP Tools
+- Source of truth for all records and attachments
+- Enables engine migration without data loss
+- Allows rebuilding engine indexes from durable storage
 
-| Tool           | Description                       |
-| -------------- | --------------------------------- |
-| `query`        | Search knowledge base             |
-| `insert`       | Add text                          |
-| `insert_file`  | Add file (path or base64 content) |
-| `delete`       | Remove record                     |
-| `list_records` | List records                      |
-| `info`         | Knowledge base metadata           |
+**Federation** enables querying multiple knowledge bases as one:
 
-## Docker
+- Aggregates results from local memories and remote MCP servers
+- Configures sources via:
+  - `federation.memories` - names of local/global memories,
+  - `federation.configs` - paths to config files, and
+  - `federation.remotes` - MCP server URLs
+- Read-only: can only query remote memories
+
+### Docker
 
 ```sh
 # Build
 docker build -t kbm .
-
 # Run (auto-creates memory if needed)
 docker run -v kbm-data:/data -p 8000:8000 kbm
-docker run -v kbm-data:/data -p 8000:8000 kbm my-memory  # custom name
-
-# Debug logging
-docker run -e KBM_DEBUG=1 -v kbm-data:/data -p 8000:8000 kbm
 ```
 
 **docker-compose.yaml:**
@@ -84,12 +72,48 @@ services:
       - "8000:8000"
     volumes:
       - kbm-data:/data
-    environment:
-      - KBM_DEBUG=0
-
 volumes:
   kbm-data:
 ```
+
+### Authentication (HTTP)
+
+When using HTTP transport, you can secure your server with GitHub OAuth. This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
+
+#### Setup
+
+1. **Create a GitHub OAuth App**:
+   - Go to GitHub → Settings → Developer Settings → OAuth Apps → New OAuth App
+   - Set "Authorization callback URL" to `http://your-server:8000/oauth/callback`
+   - Note your Client ID and Client Secret
+
+2. **Configure your memory**:
+
+```yaml
+# .kbm.yaml
+name: my-project
+transport: http
+port: 8000
+
+auth:
+  provider: github
+  client_id: "Ov23li..."
+  client_secret: "abc123..."
+  base_url: "http://localhost:8000"  # or your public URL
+  allowed_emails:
+    - alice@company.com
+    - bob@company.com
+  read_only_emails:
+    - intern@company.com  # can query but not insert/delete
+```
+
+#### How it works
+
+1. Client connects to your MCP server over HTTP
+2. Server redirects to GitHub login (opens browser)
+3. User authorizes and GitHub returns a token
+4. Server validates the token and checks email against allowlist
+5. Read-only users can only use `query` and `info` tools
 
 ## Development
 
@@ -100,38 +124,10 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 ./scripts/check.sh       # lint, typecheck, test
 ```
 
-## Architecture
-
-**Engines** provide different retrieval strategies. Use `chat-history` for lightweight text storage,
-`rag-anything` for semantic search over documents/images:
-
-- `chat-history` - Simple JSON storage for conversations
-- `rag-anything` - Multi-modal RAG with LightRAG
-- `federation` - Aggregates queries across multiple memories, local and remote
-
-**Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
-
-- Source of truth for all records and attachments
-- Enables engine migration without data loss
-- Allows rebuilding engine indexes from durable storage
-- Uses async SQLAlchemy with aiosqlite
-
-**Federation** enables querying multiple knowledge bases as one:
-
-- Aggregates results from local memories and remote MCP servers
-- Configures sources via:
-  - `federation.memories` - names of local/global memories,
-  - `federation.configs` - paths to config files, and
-  - `federation.remotes` - MCP server URLs
-- Read-only: can only query remote memories
+For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` flag.
 
 ## TODO
 
-- [ ] **Authorization (*Security*)**: Add API key support for HTTP server mode
-  - Read/write scopes
-  - API key generation and management commands
-  - Key validation middleware for MCP requests
-  - OAuth2 support for web interface
 - [ ] **CI/CD (*Quality*)**: Automated testing, linting, and deployment pipelines
   - CI:
     - Tests with coverage on push and pull requests

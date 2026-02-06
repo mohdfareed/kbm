@@ -7,16 +7,28 @@ from pydantic import BaseModel
 from pydantic_settings import SettingsConfigDict
 
 
-class EngineConfig(BaseModel):
-    model_config = SettingsConfigDict(extra="forbid")
-
-
 class Engine(str, Enum):
     """Available storage engines."""
 
     CHAT_HISTORY = "chat-history"
     RAG_ANYTHING = "rag-anything"
     FEDERATION = "federation"
+
+
+class EngineConfig(BaseModel):
+    model_config = SettingsConfigDict(extra="forbid")
+
+
+class CanonicalConfig(BaseModel):
+    """Canonical storage configuration."""
+
+    model_config = SettingsConfigDict(extra="forbid")
+
+    # Database URL (defaults to SQLite, can be PostgreSQL, MySQL, etc.)
+    # Examples:
+    #   sqlite+aiosqlite:///path/to/db.sqlite
+    #   postgresql+asyncpg://user:pass@host/db
+    database_url: str | None = None
 
 
 # MARK: Engine-specific Configs
@@ -43,16 +55,6 @@ class RAGAnythingConfig(EngineConfig):
     enable_image_processing: bool = True
     enable_table_processing: bool = True
     enable_equation_processing: bool = True
-
-
-class CanonicalConfig(EngineConfig):
-    """Canonical storage configuration."""
-
-    # Database URL (defaults to SQLite, can be PostgreSQL, MySQL, etc.)
-    # Examples:
-    #   sqlite+aiosqlite:///path/to/db.sqlite
-    #   postgresql+asyncpg://user:pass@host/db
-    database_url: str | None = None
 
 
 class FederationConfig(EngineConfig):

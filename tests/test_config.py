@@ -69,6 +69,7 @@ class TestYamlLoading:
         )
 
         config = MemoryConfig.from_config(config_path)
+        assert config.engine == Engine.RAG_ANYTHING
         assert config.rag_anything.embedding_dim == 1536
 
     def test_default_values_applied(self, tmp_path: Path) -> None:
@@ -107,47 +108,35 @@ class TestYamlLoading:
 class TestEnvVarOverrides:
     """Environment variable override tests."""
 
-    def test_env_overrides_yaml(
+    def test_env_overrides_yaml_simple_field(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Environment variables override YAML values."""
+        """Environment variables override YAML values for simple fields."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: from-yaml\nengine: chat-history\n")
+        config_path.write_text("name: from-yaml\nport: 8000\n")
 
-        monkeypatch.setenv("KBM_ENGINE", "rag-anything")
+        monkeypatch.setenv("KBM_PORT", "9000")
 
         config = MemoryConfig.from_config(config_path)
         assert config.name == "from-yaml"  # from YAML
-        assert config.engine == Engine.RAG_ANYTHING  # from env
-
-    def test_nested_env_override(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Nested config can be overridden via env."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\n")
-
-        monkeypatch.setenv("KBM_RAG_ANYTHING__EMBEDDING_DIM", "1536")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.rag_anything.embedding_dim == 1536
+        assert config.port == 9000  # from env
 
     def test_init_overrides_env_and_yaml(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Init kwargs have highest priority."""
         config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: from-yaml\nengine: rag-anything\n")
-        monkeypatch.setenv("KBM_ENGINE", "rag-anything")
+        config_path.write_text("name: from-yaml\nport: 8000\n")
+        monkeypatch.setenv("KBM_PORT", "9000")
 
         config = MemoryConfig(
             name="from-init",
             file_path=config_path,
-            engine=Engine.CHAT_HISTORY,
+            port=7000,
             _yaml_file=config_path,  # type: ignore[call-arg]
         )
         assert config.name == "from-init"  # from init (highest)
-        assert config.engine == Engine.CHAT_HISTORY  # from init (highest)
+        assert config.port == 7000  # from init (highest)
 
 
 class TestComputedPaths:

@@ -7,6 +7,7 @@ from pydantic import computed_field
 
 from .app_config import AppConfig
 from .app_settings import app_settings
+from .auth_config import AuthConfig, GithubAuthConfig
 from .engine_config import (
     CanonicalConfig,
     ChatHistoryConfig,
@@ -27,7 +28,6 @@ class MemoryConfig(AppConfig):
     """The configuration for a knowledge base memory."""
 
     name: str
-    engine: Engine = Engine.CHAT_HISTORY
     server_name: str = "memories"
     instructions: str = (
         "You have access to this project's knowledge base - a persistent memory "
@@ -36,14 +36,16 @@ class MemoryConfig(AppConfig):
         "future conversations."
     )
 
-    transport: Transport = Transport.STDIO
-    host: str = "0.0.0.0"
-    port: int = 8000
-
+    engine: Engine = Engine.CHAT_HISTORY
+    canonical: CanonicalConfig = CanonicalConfig()
     chat_history: ChatHistoryConfig = ChatHistoryConfig()
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
-    canonical: CanonicalConfig = CanonicalConfig()
     federation: FederationConfig = FederationConfig()
+
+    transport: Transport = Transport.STDIO
+    auth: AuthConfig | GithubAuthConfig = AuthConfig()
+    host: str = "0.0.0.0"
+    port: int = 8000
 
     # MARK: Computed Properties
 

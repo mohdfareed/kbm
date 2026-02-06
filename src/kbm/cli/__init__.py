@@ -48,11 +48,13 @@ def callback(
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
-    level = logging.DEBUG if debug else logging.INFO
+    app_settings.debug = debug or app_settings.debug
+
+    level = logging.DEBUG if app_settings.debug else logging.INFO
     handler = RichHandler(
         console=err_console,
-        show_time=debug,
-        show_path=debug,
+        show_time=app_settings.debug,
+        show_path=app_settings.debug,
         rich_tracebacks=True,
         markup=True,
         keywords=[],  # Highlight keywords
@@ -61,7 +63,6 @@ def callback(
 
     logging.root.setLevel(level)
     logging.root.addHandler(handler)
-    app_settings.debug = debug
 
     # Logging levels for libraries
     logging.getLogger("fastmcp").handlers = [handler]

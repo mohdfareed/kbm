@@ -5,8 +5,11 @@ __all__ = ["run_server"]
 import logging
 
 from fastmcp import FastMCP, settings
+from fastmcp.server.auth import require_auth
+from fastmcp.server.middleware import AuthMiddleware
 
-from kbm.config import MemoryConfig, Transport
+from kbm.auth import build_auth_provider, build_email_check
+from kbm.config import GithubAuthConfig, MemoryConfig, Transport
 from kbm.engines import get_engine
 
 logger = logging.getLogger(__name__)
@@ -17,9 +20,21 @@ def run_server(config: MemoryConfig) -> None:
     logger.info(f"Initializing '{config.server_name}' MCP server...")
     settings.show_server_banner = False
 
-    mcp = FastMCP(name=config.server_name, instructions=config.instructions)
-    engine = get_engine(config)
+    # Build server and auth provider if configured
+    auth_provider = build_auth_provider(config)
+    mcp = FastMCP(
+        name=config.server_name,
+        instructions=config.instructions,
+        auth=auth_provider,
+    )
 
+    # Add global auth middleware if GitHub auth is enabled
+    github_auth = config.auth if isinstance(config.auth, GithubAuthConfig) else None
+    if auth_provider and github_auth:
+        access_check = build_email_check(github_auth)
+        mcp.add_middleware(AuthMiddleware(auth=[require_auth, access_check]))
+
+    engine = get_engine(config)
     for op in engine.supported_operations:
         logger.debug(f"Adding tool: {op.method_name}")
         mcp.add_tool(getattr(engine, op.method_name))

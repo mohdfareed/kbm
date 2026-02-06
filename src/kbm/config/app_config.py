@@ -75,8 +75,8 @@ class AppConfig(BaseSettings):
         return (
             init_settings,
             env_settings,
-            dotenv_settings,
             DotEnvSettingsSource(settings_cls, env_file=env_file),
+            dotenv_settings,
             YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file),
             JsonConfigSettingsSource(settings_cls, json_file=json_file),
             file_secret_settings,

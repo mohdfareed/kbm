@@ -18,21 +18,31 @@ _meta = metadata("kbm")
 
 def _get_env(key: str) -> str | None:
     return (
-        dotenv.dotenv_values(".kbm.env").get(key)
+        os.environ.get(key)
+        or dotenv.dotenv_values(".kbm.env").get(key)
         or dotenv.dotenv_values(".env").get(key)
-        or os.environ.get(key)
     )
 
 
 class _AppMetadata(BaseModel):
+    _debug: bool = False
+
     name: str = _meta["Name"]
     version: str = _meta["Version"]
     description: str = _meta["Summary"]
 
-    @cached_property
+    @property
     def debug(self) -> bool:
-        """Debug mode ($KBM_DEBUG)."""
-        return _get_env(_KBM_DEBUG) in ("1", "true", "True")
+        """Debug mode ($KBM_DEBUG or $DEBUG)."""
+        return self._debug or (_get_env(_KBM_DEBUG) or _get_env("DEBUG")) in (
+            "1",
+            "true",
+            "True",
+        )
+
+    @debug.setter
+    def debug(self, new_data):
+        self._debug = new_data
 
     @cached_property
     def home(self) -> Path:

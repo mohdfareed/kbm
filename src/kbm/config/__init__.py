@@ -1,8 +1,13 @@
 """Application configuration and settings."""
 
 __all__ = [
+    "AuthConfig",
+    "AuthProvider",
+    "CanonicalConfig",
     "ChatHistoryConfig",
     "Engine",
+    "FederationConfig",
+    "GithubAuthConfig",
     "MemoryConfig",
     "RAGAnythingConfig",
     "Transport",
@@ -10,5 +15,12 @@ __all__ = [
 ]
 
 from .app_settings import app_settings
-from .engine_config import ChatHistoryConfig, Engine, RAGAnythingConfig
+from .auth_config import AuthConfig, AuthProvider, GithubAuthConfig
+from .engine_config import (
+    CanonicalConfig,
+    ChatHistoryConfig,
+    Engine,
+    FederationConfig,
+    RAGAnythingConfig,
+)
 from .memory_config import MemoryConfig, Transport
