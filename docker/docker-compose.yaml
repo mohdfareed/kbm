@@ -1,0 +1,14 @@
+services:
+  kbm:
+    build: https://github.com/mohdfareed/kbm.git
+    # image: ghcr.io/mohdfareed/kbm:latest
+    restart: unless-stopped
+
+    hostname: kbm  # Memory name
+    ports:
+      - "8000:8000" # <host>:<container>
+    volumes:
+      - kbm-data:/data  # Configs and memories
+
+volumes:
+  kbm-data:

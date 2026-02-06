@@ -38,9 +38,9 @@ def init(
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
     if json:
-        config_path.write_text(config.dump_json())
+        config_path.write_text(config.dump_json(full=True))
     else:
-        config_path.write_text(config.dump_yaml())
+        config_path.write_text(config.dump_yaml(full=True))
 
     location = "local" if not config.is_global else "global"
     console.print(

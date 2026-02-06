@@ -1,0 +1,30 @@
+# Git
+.git
+.github
+.gitignore
+
+# Python
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+
+# IDE
+.vscode
+.DS_Store
+.editorconfig
+.python-version
+
+# Project
+.kbm
+.kbm.*
+.env
+design/
+scripts/
+tests/
+
+# Docker
+docker/*.yaml
+docker/Dockerfile

@@ -1,0 +1,12 @@
+services:
+  kbm-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+
+    hostname: kbm-dev  # Memory name
+    ports:
+      - "8000:8000" # <host>:<container>
+    volumes:
+      - ../.kbm:/data

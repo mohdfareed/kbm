@@ -1,9 +1,8 @@
 #!/bin/sh
 set -e
 
-# Default memory name
-NAME="${1:-default}"
-shift 2>/dev/null || true
+NAME="${1:-$(hostname)}" # Use hostname if no argument provided
+[ $# -gt 0 ] && shift || true # shift first argument if provided
 
 # Init memory if it doesn't exist
 if ! kbm status "$NAME" > /dev/null 2>&1; then

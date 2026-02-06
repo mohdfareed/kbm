@@ -26,9 +26,12 @@ name: my-project
 engine: chat-history  # or rag-anything
 ```
 
-Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
-Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir).
-Backup by copying this directory.
+* Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
+* Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir).
+  * `kbm home` displays the data directory.
+  * Backup by copying this directory.
+`kbm init` creates a new memory with a default config with all possible options.
+`kbm status` shows the current configuration of a memory.
 
 ## Features
 
@@ -57,24 +60,12 @@ Backup by copying this directory.
 
 ```sh
 # Build
-docker build -t kbm .
+docker build -t kbm ./docker
 # Run (auto-creates memory if needed)
 docker run -v kbm-data:/data -p 8000:8000 kbm
 ```
 
-**docker-compose.yaml:**
-
-```yaml
-services:
-  kbm:
-    build: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - kbm-data:/data
-volumes:
-  kbm-data:
-```
+Example `docker-compose.yaml` provided in `./docker/`.
 
 ### Authentication (HTTP)
 
@@ -91,7 +82,6 @@ When using HTTP transport, you can secure your server with GitHub OAuth. This us
 
 ```yaml
 # .kbm.yaml
-name: my-project
 transport: http
 port: 8000
 
@@ -99,8 +89,8 @@ auth:
   provider: github
   client_id: "Ov23li..."
   client_secret: "abc123..."
-  base_url: "http://localhost:8000"  # or your public URL
-  allowed_emails:
+  base_url: "http://localhost:8000"  # or public URL
+  allowed_emails: # empty = allow all
     - alice@company.com
     - bob@company.com
   read_only_emails:

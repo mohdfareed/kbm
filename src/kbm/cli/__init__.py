@@ -19,8 +19,9 @@ app = typer.Typer(
     name=app_settings.name,
     help=app_settings.description,
     no_args_is_help=True,
+    # rich_markup_mode=None,
+    rich_markup_mode="rich",
     context_settings={"help_option_names": ["-h", "--help"]},
-    rich_markup_mode="rich",  # Enable rich markup in help text
 )
 
 # App logger (not root - avoids library noise)
