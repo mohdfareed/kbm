@@ -1,21 +1,58 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  # Gate: make sure CI passes before releasing
   ci:
     uses: ./.github/workflows/ci.yaml
 
-  publish-docker:
-    name: Publish Docker Image
+  versioning:
+    name: Bump Version
     needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --dev --locked
+
+      - name: Bump version
+        id: bump
+        run: |
+          uv version --bump ${{ inputs.bump }}
+          VERSION=$(uv version)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumped to $VERSION"
+
+      - name: Commit & tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          git commit -m "release: v${{ steps.bump.outputs.version }}"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main --tags
+
+  docker:
+    name: Publish Docker Image
+    needs: versioning
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -24,6 +61,8 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: v${{ needs.versioning.outputs.version }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -38,9 +77,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=v${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ needs.versioning.outputs.version }}
             type=raw,value=latest
 
       - name: Build and push
@@ -54,21 +93,16 @@ jobs:
 
   github-release:
     name: GitHub Release
-    needs: [ci, publish-docker]
+    needs: versioning
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
-      - run: uv sync --dev
+          ref: v${{ needs.versioning.outputs.version }}
 
-      - name: Generate CLI reference
-        run: ./scripts/docs.sh
-
-      - name: Build release notes body
+      - name: Build release notes
         id: notes
         run: |
           {
@@ -77,10 +111,10 @@ jobs:
             echo ""
             echo '```bash'
             echo "# Install from GitHub (requires git)"
-            echo "pip install git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}"
+            echo "pip install git+https://github.com/${{ github.repository }}.git@v${{ needs.versioning.outputs.version }}"
             echo ""
             echo "# Or with pipx"
-            echo "pipx install git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}"
+            echo "pipx install git+https://github.com/${{ github.repository }}.git@v${{ needs.versioning.outputs.version }}"
             echo '```'
             echo ""
             echo "## CLI Reference"
@@ -89,8 +123,9 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.versioning.outputs.version }}
           generate_release_notes: true
           body: ${{ steps.notes.outputs.body }}

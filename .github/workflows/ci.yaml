@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call: # allow reuse from release workflow
 
 permissions:
   contents: read
@@ -23,14 +24,14 @@ jobs:
       - name: Check formatting
         run: uv run ruff format --check src/ tests/
 
-      - name: Lint
+      - name: Run linter
         run: uv run ruff check src/ tests/
 
-      - name: Type check
+      - name: Run type checker
         run: uv run pyright src/ tests/
 
   test:
-    name: Test
+    name: Run Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -49,7 +50,7 @@ jobs:
           uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
   docs:
-    name: CLI Docs
+    name: Check Docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
