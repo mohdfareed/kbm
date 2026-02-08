@@ -1,81 +1,97 @@
 """RAG-Anything engine - multi-modal RAG with knowledge graphs."""
 
-__all__ = ["RAGAnythingEngine"]
+__all__: list[str] = []
 
 import logging
-import os
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 
+import raganything
 from lightrag import LightRAG
-from lightrag.llm.openai import openai_complete_if_cache, openai_embed
 from lightrag.utils import EmbeddingFunc
-from raganything import RAGAnything, RAGAnythingConfig
 
-from kbm.engine import EngineProtocol, Operation
-from kbm.models import (
-    DeleteResponse,
-    InfoResponse,
-    InsertResponse,
-    ListResponse,
-    QueryResponse,
-    QueryResult,
-)
+from kbm.config import MemoryConfig, RAGAnythingConfig
+from kbm.store import CanonicalStore
 
-if TYPE_CHECKING:
-    from kbm.config import MemoryConfig
+from . import schema
+from .base_engine import EngineBase, Operation
 
 
-class RAGAnythingEngine(EngineProtocol):
+def resolve_provider(
+    provider: RAGAnythingConfig.Provider,
+) -> tuple[Callable[..., Any], Callable[..., Any]]:
+    match provider:
+        case RAGAnythingConfig.Provider.OPENAI:
+            from lightrag.llm.openai import openai_complete_if_cache, openai_embed
+
+            return openai_complete_if_cache, openai_embed.func
+
+        case RAGAnythingConfig.Provider.AZURE:
+            from lightrag.llm.azure_openai import (
+                azure_openai_complete_if_cache,
+                azure_openai_embed,
+            )
+
+            return azure_openai_complete_if_cache, azure_openai_embed.func
+
+        case RAGAnythingConfig.Provider.ANTHROPIC:
+            from lightrag.llm.anthropic import (
+                anthropic_complete_if_cache,
+                anthropic_embed,
+            )
+
+            return anthropic_complete_if_cache, anthropic_embed
+
+        case _:
+            raise ValueError(f"Unsupported provider: {provider}")
+
+
+class RAGAnythingEngine(EngineBase):
     logger = logging.getLogger(__name__)
+    supported_operations = frozenset(
+        {Operation.INFO, Operation.QUERY, Operation.INSERT, Operation.INSERT_FILE}
+    )
 
-    def __init__(self, config: "MemoryConfig") -> None:
-        self.logger.info("Initializing RAG-Anything engine...")
+    def __init__(self, config: "MemoryConfig", store: CanonicalStore) -> None:
+        super().__init__(config, store)
 
         self.config = config.rag_anything
-        self.working_dir = config.data_path / "rag-anything"
+        self.working_dir = config.engine_data_path
         self.working_dir.mkdir(parents=True, exist_ok=True)
 
         self._api_key = self.config.api_key
         self._base_url = self.config.base_url
-
-        if not self.config.api_key:
-            raise ValueError(
-                "RAG-Anything engine API key is missing. "
-                "Set OPENAI_API_KEY or rag_anything.api_key in config."
-            )
+        self._api_version = self.config.api_version  # Azure only
+        self._complete_func, self._embed_func = resolve_provider(self.config.provider)
 
         self._lightrag: LightRAG | None = None
-        self._rag: RAGAnything | None = None
+        self._rag: raganything.RAGAnything | None = None
 
-    @property
-    def supported_operations(self) -> frozenset[Operation]:
-        return frozenset(
-            {Operation.INFO, Operation.QUERY, Operation.INSERT, Operation.INSERT_FILE}
-        )
+    # MARK: Hook overrides
 
-    async def info(self) -> InfoResponse:
-        return InfoResponse(
+    async def _info(self) -> schema.InfoResponse:
+        return schema.InfoResponse(
             engine="rag-anything",
             records=-1,  # Not tracked
             metadata={
-                "embedding_model": self.config.embedding_model,
-                "llm_model": self.config.llm_model,
                 "query_mode": self.config.query_mode,
-                "image_processing": str(self.config.enable_image_processing),
-                "table_processing": str(self.config.enable_table_processing),
-                "equation_processing": str(self.config.enable_equation_processing),
+                "llm_model": self.config.llm_model,
+                "embedding_model": self.config.embedding_model,
+                "embedding_dim": str(self.config.embedding_dim),
             },
         )
 
-    async def query(self, query: str, top_k: int = 10) -> QueryResponse:
+    async def _query(self, query: str, top_k: int = 10) -> schema.QueryResponse:
         rag = self._get_rag(await self._get_lightrag())
         result = await rag.aquery_vlm_enhanced(query, mode=self.config.query_mode)
 
-        return QueryResponse(
+        return schema.QueryResponse(
             results=[
-                QueryResult(id="rag", content=str(result), created_at=datetime.now())
+                schema.QueryResult(
+                    id="rag", content=str(result), created_at=datetime.now()
+                )
             ]
             if result
             else [],
@@ -83,60 +99,44 @@ class RAGAnythingEngine(EngineProtocol):
             total=1 if result else 0,
         )
 
-    async def insert(self, content: str, doc_id: str | None = None) -> InsertResponse:
-        """Insert text content into the knowledge base. Document ID is"""
+    async def _insert(
+        self, content: str, doc_id: str | None = None
+    ) -> schema.InsertResponse:
+        """Store in canonical + index in RAG pipeline."""
+        result = await super()._insert(content, doc_id)
         rag = self._get_rag(await self._get_lightrag())
         await rag.insert_content_list(
             content_list=[{"type": "text", "text": content, "page_idx": 0}],
             file_path="text_insert.txt",
-            doc_id=doc_id,
+            doc_id=result.id,
         )
-        return InsertResponse(
-            id=doc_id or "text", message="Inserted into knowledge graph"
+        return schema.InsertResponse(
+            id=result.id, message="Inserted into knowledge graph"
         )
 
-    async def insert_file(
+    async def _insert_file(
         self, file_path: str, content: str | None = None, doc_id: str | None = None
-    ) -> InsertResponse:
-        # Wrapper handles base64 -> file, so we always get a real path
+    ) -> schema.InsertResponse:
+        """Store in canonical + ingest into RAG pipeline."""
+        result = await super()._insert_file(file_path, content, doc_id)
         path = Path(file_path).expanduser().resolve()
-        if not path.is_file():
-            raise FileNotFoundError(f"File not found: {file_path}")
 
         rag = self._get_rag(await self._get_lightrag())
         await rag.process_document_complete(
             file_path=str(path), output_dir=str(self.working_dir / "output")
         )
-        return InsertResponse(id=doc_id or path.name, message=f"Ingested: {path.name}")
+        return schema.InsertResponse(id=result.id, message=f"Ingested: {path.name}")
 
-    async def delete(self, record_id: str) -> DeleteResponse:
-        raise NotImplementedError("RAG-Anything does not support delete.")
+    # MARK: Internal
 
-    async def list_records(self, limit: int = 100, offset: int = 0) -> ListResponse:
-        raise NotImplementedError("RAG-Anything does not support list.")
-
-    # --- Internal ---
-
-    def _get_embedding_func(self) -> EmbeddingFunc:
-        return EmbeddingFunc(
-            embedding_dim=self.config.embedding_dim,
-            max_token_size=8192,
-            func=lambda texts: openai_embed.func(
-                texts,
-                model=self.config.embedding_model,
-                api_key=self._api_key,
-                base_url=self._base_url,
-            ),
-        )
-
-    async def _llm_func(self, prompt: str, **kwargs) -> str:  # type: ignore[return]
-        return await openai_complete_if_cache(
-            model=self.config.llm_model,
-            prompt=prompt,
-            api_key=self._api_key,
-            base_url=self._base_url,
-            **kwargs,
-        )
+    def _get_rag(self, lightrag: LightRAG) -> raganything.RAGAnything:
+        if self._rag is None:
+            self._rag = raganything.RAGAnything(
+                lightrag=lightrag,
+                vision_model_func=self._vision_func,
+                config=raganything.RAGAnythingConfig(),
+            )
+        return self._rag
 
     async def _get_lightrag(self) -> LightRAG:
         if self._lightrag is None:
@@ -147,14 +147,62 @@ class RAGAnythingEngine(EngineProtocol):
             )
         return self._lightrag
 
-    def _get_rag(self, lightrag: LightRAG) -> RAGAnything:
-        if self._rag is None:
-            self._rag = RAGAnything(
-                lightrag=lightrag,
-                config=RAGAnythingConfig(
-                    enable_image_processing=self.config.enable_image_processing,
-                    enable_table_processing=self.config.enable_table_processing,
-                    enable_equation_processing=self.config.enable_equation_processing,
-                ),
-            )
-        return self._rag
+    def _get_embedding_func(self) -> EmbeddingFunc:
+        return EmbeddingFunc(
+            embedding_dim=self.config.embedding_dim,
+            func=lambda texts: self._embed_func(
+                texts,
+                model=self.config.embedding_model,
+                api_key=self._api_key,
+                base_url=self._base_url,
+                **self._provider_kwargs(),
+            ),
+        )
+
+    async def _llm_func(self, prompt: str, **kwargs) -> str:  # type: ignore[return]
+        return await self._complete_func(
+            model=self.config.llm_model,
+            prompt=prompt,
+            api_key=self._api_key,
+            base_url=self._base_url,
+            **self._provider_kwargs(),
+            **kwargs,
+        )
+
+    async def _vision_func(
+        self,
+        prompt: str,
+        *,
+        image_data: str | None = None,
+        system_prompt: str | None = None,
+        **kwargs,
+    ) -> str:
+        """Vision completion for multi-modal RAG."""
+        content: str | list[dict] = prompt
+        if image_data:
+            content = [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{image_data}",
+                    },
+                },
+            ]
+
+        return await self._complete_func(
+            model=self.config.vision_model,
+            prompt=content,  # type: ignore[arg-type]
+            system_prompt=system_prompt,
+            api_key=self._api_key,
+            base_url=self._base_url,
+            **self._provider_kwargs(),
+            **kwargs,
+        )
+
+    def _provider_kwargs(self) -> dict[str, Any]:
+        """Extra kwargs required by the active provider (e.g. api_version)."""
+        extra: dict[str, Any] = {}
+        if self._api_version:
+            extra["api_version"] = self._api_version
+        return extra

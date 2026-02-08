@@ -14,35 +14,26 @@ def isolate_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def tmp_config(tmp_path: Path) -> Generator[Path, None, None]:
-    """Provide a temporary .kbm.yaml config file."""
-    config_path = tmp_path / ".kbm.yaml"
-    config_path.write_text("name: test-memory\nengine: chat-history\n")
-    yield config_path
-
-
-@pytest.fixture
-def tmp_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Set up temporary KBM_HOME directory."""
+def tmp_home(tmp_path: Path) -> Generator[Path, None, None]:
+    """Set up temporary KBM home directory."""
     from kbm.config import app_settings
 
-    # Clear cached properties so new env var takes effect
-    for prop in ("home", "memories_path", "data_root"):
-        app_settings.__dict__.pop(prop, None)  # type: ignore[attr-defined]
+    original_home = app_settings.home
 
     home = tmp_path / "kbm-home"
     home.mkdir()
     (home / "memories").mkdir()
     (home / "data").mkdir()
-    monkeypatch.setenv("KBM_HOME", str(home))
-    return home
+    app_settings.home = home
+
+    yield home
+
+    app_settings.home = original_home
 
 
 @pytest.fixture(autouse=True)
-def clean_env() -> Generator[None, None, None]:
+def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Remove KBM env vars for clean config tests."""
-    env_vars = {k: v for k, v in os.environ.items() if k.startswith("KBM_")}
-    for k in env_vars:
-        del os.environ[k]
-    yield
-    os.environ.update(env_vars)
+    for k in list(os.environ):
+        if k.startswith("KBM_"):
+            monkeypatch.delenv(k)

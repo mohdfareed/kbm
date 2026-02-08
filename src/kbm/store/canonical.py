@@ -1,4 +1,4 @@
-"""Canonical data store — SQLite source of truth for all records."""
+"""Canonical data store - SQLite source of truth for all records."""
 
 import base64
 import hashlib
@@ -135,12 +135,6 @@ class CanonicalStore:
         )
         return rid, abs_path
 
-    # MARK: Private
-
-    async def _ensure_ready(self) -> None:
-        if not self._ready:
-            await self.initialize()
-
     def _save_attachment(self, file_path: str, content: str | None) -> Path:
         """Decode or read file data, save content-deduped into attachments/.
 
@@ -166,3 +160,9 @@ class CanonicalStore:
         if not dest.exists():
             dest.write_bytes(data)
         return dest
+
+    # MARK: Private
+
+    async def _ensure_ready(self) -> None:
+        if not self._ready:
+            await self.initialize()

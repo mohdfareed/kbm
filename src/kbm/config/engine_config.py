@@ -29,5 +29,6 @@ class RAGAnythingConfig(BaseModel):
     # Model settings
     query_mode: str = "mix"
     llm_model: str = "gpt-4o-mini"
+    vision_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-large"
     embedding_dim: int = 3072

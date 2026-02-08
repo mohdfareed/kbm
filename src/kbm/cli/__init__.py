@@ -29,7 +29,7 @@ def callback(
         app_settings.debug, "-d", "--debug", help="Enable debug logging."
     ),
     home: Path | None = typer.Option(
-        app_settings.home, "-r", "--root", help="Override home directory."
+        None, "-r", "--root", help="Override home directory."
     ),
     # Subcommands
     version: bool = typer.Option(

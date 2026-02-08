@@ -1,6 +1,9 @@
-"""Tests for config loading."""
+"""Tests for config loading and validation.
 
-import os
+Unit tests for MemoryConfig parsing, validation, and source priority.
+These test the config layer in isolation (no CLI, no filesystem side effects).
+"""
+
 from pathlib import Path
 
 import pytest
@@ -9,165 +12,121 @@ from pydantic import ValidationError
 from kbm.config import Engine, MemoryConfig, Transport
 
 
-class TestConfigValidation:
-    """Config validation tests."""
+class TestValidation:
+    """Input validation - rejected inputs raise immediately."""
 
     def test_requires_name(self, tmp_path: Path) -> None:
-        """Config requires a name field."""
         with pytest.raises(ValidationError):
             MemoryConfig()  # type: ignore[call-arg]
 
     def test_requires_file_path(self, tmp_path: Path) -> None:
-        """Config requires file_path field."""
         with pytest.raises(ValidationError):
             MemoryConfig(name="test")  # type: ignore[call-arg]
 
-    def test_unknown_engine_rejected(self, tmp_path: Path) -> None:
-        """Config validation rejects unknown engine."""
+    def test_rejects_invalid_engine(self, tmp_path: Path) -> None:
         with pytest.raises(ValidationError):
             MemoryConfig(name="test", file_path=tmp_path, engine="invalid")  # type: ignore[arg-type]
 
-    def test_unknown_transport_rejected(self, tmp_path: Path) -> None:
-        """Config validation rejects unknown transport."""
+    def test_rejects_invalid_transport(self, tmp_path: Path) -> None:
         with pytest.raises(ValidationError):
             MemoryConfig(name="test", file_path=tmp_path, transport="invalid")  # type: ignore[arg-type]
 
+    def test_missing_file_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            MemoryConfig.from_file(tmp_path / "nonexistent.yaml")
 
-class TestYamlLoading:
-    """YAML config file loading tests."""
-
-    def test_loads_name_from_yaml(self, tmp_path: Path) -> None:
-        """Loads name field from YAML."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: my-memory\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.name == "my-memory"
-
-    def test_loads_engine_from_yaml(self, tmp_path: Path) -> None:
-        """Loads engine field from YAML."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\nengine: rag-anything\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.engine == Engine.RAG_ANYTHING
-
-    def test_loads_transport_from_yaml(self, tmp_path: Path) -> None:
-        """Loads transport field from YAML."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\ntransport: http\nport: 9000\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.transport == Transport.HTTP
-        assert config.port == 9000
-
-    def test_loads_nested_config(self, tmp_path: Path) -> None:
-        """Loads nested engine config from YAML."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text(
-            "name: test\nengine: rag-anything\nrag_anything:\n  embedding_dim: 1536\n"
-        )
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.engine == Engine.RAG_ANYTHING
-        assert config.rag_anything.embedding_dim == 1536
-
-    def test_default_values_applied(self, tmp_path: Path) -> None:
-        """Default values are applied when not in YAML."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\n")
-
-        config = MemoryConfig.from_config(config_path)
-        assert config.engine == Engine.CHAT_HISTORY  # default
-        assert config.transport == Transport.STDIO  # default
-        assert config.port == 8000  # default
-
-    def test_missing_yaml_file_raises(self, tmp_path: Path) -> None:
-        """Raises error for missing YAML file."""
-        with pytest.raises(Exception):
-            MemoryConfig.from_config(tmp_path / "nonexistent.yaml")
-
-    def test_empty_yaml_file_raises(self, tmp_path: Path) -> None:
-        """Empty YAML file still requires name."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("")
-
+    def test_empty_file_raises(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("")
         with pytest.raises(ValidationError):
-            MemoryConfig.from_config(config_path)
+            MemoryConfig.from_file(f)
 
-    def test_ignores_extra_fields(self, tmp_path: Path) -> None:
-        """Extra fields in YAML are ignored."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\nunknown_field: value\n")
-
-        config = MemoryConfig.from_config(config_path)
+    def test_extra_fields_ignored(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: test\nunknown_field: value\n")
+        config = MemoryConfig.from_file(f)
         assert config.name == "test"
         assert not hasattr(config, "unknown_field")
 
 
-class TestEnvVarOverrides:
-    """Environment variable override tests."""
+class TestYamlLoading:
+    """Values read from YAML appear on the config object."""
 
-    def test_env_overrides_yaml_simple_field(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Environment variables override YAML values for simple fields."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: from-yaml\nport: 8000\n")
+    def test_name(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: my-memory\n")
+        assert MemoryConfig.from_file(f).name == "my-memory"
 
-        monkeypatch.setenv("KBM_PORT", "9000")
+    def test_engine(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: test\nengine: rag-anything\n")
+        assert MemoryConfig.from_file(f).engine == Engine.RAG_ANYTHING
 
-        config = MemoryConfig.from_config(config_path)
-        assert config.name == "from-yaml"  # from YAML
-        assert config.port == 9000  # from env
+    def test_transport_and_port(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: test\ntransport: http\nport: 9000\n")
+        cfg = MemoryConfig.from_file(f)
+        assert cfg.transport == Transport.HTTP
+        assert cfg.port == 9000
 
-    def test_init_overrides_env_and_yaml(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Init kwargs have highest priority."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: from-yaml\nport: 8000\n")
-        monkeypatch.setenv("KBM_PORT", "9000")
-
-        config = MemoryConfig(
-            name="from-init",
-            file_path=config_path,
-            port=7000,
-            _yaml_file=config_path,  # type: ignore[call-arg]
+    def test_nested_engine_config(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text(
+            "name: test\nengine: rag-anything\nrag_anything:\n  embedding_dim: 1536\n"
         )
-        assert config.name == "from-init"  # from init (highest)
-        assert config.port == 7000  # from init (highest)
+        cfg = MemoryConfig.from_file(f)
+        assert cfg.rag_anything.embedding_dim == 1536
 
-
-class TestComputedPaths:
-    """Computed path tests."""
-
-    def test_data_path(self, tmp_config: Path, tmp_home: Path) -> None:
-        """data_path is $KBM_HOME/data/<name>/."""
-        config = MemoryConfig.from_config(tmp_config)
-        assert config.data_path == tmp_home / "data" / "test-memory"
+    def test_defaults_applied(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: test\n")
+        cfg = MemoryConfig.from_file(f)
+        assert cfg.engine == Engine.CHAT_HISTORY
+        assert cfg.transport == Transport.STDIO
+        assert cfg.port == 8000
 
 
 class TestSourcePriority:
-    """Test config source priority: init > env > dotenv > yaml."""
+    """Priority: init kwargs > env vars > .env file > YAML file."""
 
-    def test_priority_init_over_env_over_yaml(
+    def test_env_overrides_yaml(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Verify full priority chain."""
-        config_path = tmp_path / "config.yaml"
-        config_path.write_text("name: test\nport: 1000\nhost: yaml-host\n")
+        f = tmp_path / "config.yaml"
+        f.write_text("name: from-yaml\n")
+        monkeypatch.setenv("KBM_NAME", "from-env")
 
-        monkeypatch.setenv("KBM_PORT", "2000")
-        monkeypatch.setenv("KBM_HOST", "env-host")
+        assert MemoryConfig.from_file(f).name == "from-env"
 
-        config = MemoryConfig(
-            name="test",
-            file_path=config_path,
-            port=3000,  # init kwarg (highest priority)
-            _yaml_file=config_path,  # type: ignore[call-arg]
+    def test_init_overrides_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: from-yaml\ninstructions: yaml-inst\n")
+        monkeypatch.setenv("KBM_NAME", "from-env")
+        monkeypatch.setenv("KBM_INSTRUCTIONS", "env-inst")
+
+        cfg = MemoryConfig(
+            name="from-init",
+            file_path=f,
+            _yaml_file=f,  # type: ignore[call-arg]
         )
+        assert cfg.name == "from-init"  # init wins
+        assert cfg.instructions == "env-inst"  # env wins over yaml
 
-        assert config.port == 3000  # from init (highest)
-        assert config.host == "env-host"  # from env (middle)
-        # yaml values used only when not overridden
+
+class TestSerialization:
+    """Round-trip: write config → read it back."""
+
+    def test_dump_and_reload(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("name: test\n")
+        original = MemoryConfig.from_file(f)
+
+        out = tmp_path / "out.yaml"
+        out.write_text(original.dump_yaml())
+        reloaded = MemoryConfig.from_file(out)
+
+        assert reloaded.name == original.name
+        assert reloaded.engine == original.engine
+        assert reloaded.transport == original.transport
