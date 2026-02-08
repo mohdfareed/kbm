@@ -11,8 +11,8 @@ from kbm.engines import get_engine
 logger = logging.getLogger(__name__)
 
 
-def run_server(config: MemoryConfig) -> None:
-    """Run the MCP server."""
+def build_server(config: MemoryConfig) -> FastMCP:
+    """Build an MCP server for a memory."""
     logger.info(f"Initializing '{config.name}' MCP server...")
     settings.show_server_banner = False
 
@@ -30,6 +30,13 @@ def run_server(config: MemoryConfig) -> None:
         logger.debug(f"Adding tool: {op.method_name}")
         mcp.add_tool(getattr(engine, op.method_name))
 
+    return mcp
+
+
+def run_server(config: MemoryConfig) -> None:
+    """Run the MCP server."""
+    mcp = build_server(config)
+
     try:  # Run the mcp server
         run_mcp_app(mcp, config)
     except KeyboardInterrupt:
@@ -43,7 +50,9 @@ def run_mcp_app(mcp: FastMCP, config: MemoryConfig) -> None:
             mcp.run(transport="stdio")
 
         case Transport.HTTP:
-            logger.info(f"Starting MCP server at {config.host}:{config.port}...")
+            url = f"{config.host}:{config.port}"
+            logger.info(f"Starting MCP server at {url}...")
+
             mcp.run(
                 transport="http",
                 host=config.host,

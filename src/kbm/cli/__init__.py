@@ -10,6 +10,8 @@ from rich.console import Console
 
 from kbm.config import app_settings
 
+from .helpers import format_config
+
 MemoryNameArg = typer.Argument(Path.cwd().name, help="Memory name.")
 
 console = Console()
@@ -55,13 +57,13 @@ def callback(
         sys.exit(0)
 
     if settings:
-        for key, value in app_settings.dump(full=False).items():
-            console.print(f"{key}={value}")
+        for line in format_config(app_settings.dump(full=False)):
+            console.print(line)
         sys.exit(0)
 
     if full_settings:
-        for key, value in app_settings.dump(full=True).items():
-            console.print(f"{key}={value}")
+        for line in format_config(app_settings.dump(full=True)):
+            console.print(line)
         sys.exit(0)
 
 
@@ -85,5 +87,5 @@ def main(prog_name: str | None = None) -> None:
 
 # Register commands (order determines help display)
 # isort: off
-from kbm.cli import init, start, status, list, delete  # noqa: E402
+from kbm.cli import init, start, status, inspect, list, delete  # noqa: E402
 # isort: on

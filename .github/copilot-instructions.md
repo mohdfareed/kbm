@@ -70,4 +70,4 @@ Commands:
 | ------------------ | ------------------------------------------ |
 | `scripts/run.sh`   | Run the CLI (`./scripts/run.sh <command>`) |
 | `scripts/setup.sh` | Lock & sync dependencies                   |
-| `scripts/check.sh` | Lint, type-check, test                     |
+| `scripts/test.sh`  | Lint, type-check, test                     |

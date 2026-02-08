@@ -7,7 +7,7 @@ import typer
 from kbm.config import MemoryConfig
 
 from . import MemoryNameArg, app, console
-from .helpers import print_summary
+from .helpers import format_config, print_summary
 
 
 @app.command()
@@ -29,5 +29,5 @@ def status(
     console.print("\n[dim]Configuration:[/dim]")
 
     # Print config options with or without defaults
-    for key, value in cfg.dump(full=full).items():
-        console.print(f"{key}={value}")
+    for line in format_config(cfg.dump(full=full)):
+        console.print(line)

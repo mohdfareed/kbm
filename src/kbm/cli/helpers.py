@@ -1,6 +1,7 @@
 """CLI helpers: logging and display utilities."""
 
 __all__ = [
+    "format_config",
     "print_invalid",
     "print_orphaned",
     "print_status",
@@ -105,6 +106,18 @@ def print_orphaned(data_dir: Path) -> None:
     console.print(
         f"[yellow]●[/yellow] [bold]{data_dir.name}[/bold] • [dim]orphaned[/dim]"
     )
+
+
+def format_config(data: dict, prefix: str = "") -> list[str]:
+    """Flatten a (possibly nested) config dict into `key=value` lines."""
+    lines: list[str] = []
+    for key, value in data.items():
+        full_key = f"{prefix}{key}" if not prefix else f"{prefix}.{key}"
+        if isinstance(value, dict):
+            lines.extend(format_config(value, full_key))
+        else:
+            lines.append(f"{full_key}={value}")
+    return lines
 
 
 def print_summary(cfg: MemoryConfig) -> None:

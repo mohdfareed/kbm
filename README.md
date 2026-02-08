@@ -80,20 +80,13 @@ auth:
 git clone https://github.com/mohdfareed/kbm && cd kbm
 ./scripts/setup.sh       # install deps
 ./scripts/run.sh --help  # run CLI
-./scripts/check.sh       # lint, typecheck, test
+./scripts/test.sh        # lint, typecheck, test
 ```
 
 For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` flag.
 
 ## TODO
 
-- [ ] **`kbm inspect` command**: Introspect MCP server and its schemas
-   - New `src/kbm/cli/inspect.py`
-   - Creates MCP server in-memory, connects `fastmcp.Client`, calls
-     `list_tools()`, pretty-prints with Rich
-   - Shows per tool: name, description, inputSchema (params + types + desc),
-     annotations, output schema
-   - `--json` flag for raw JSON dump of `tools/list` response
 - [ ] **CI/CD (*Quality*)**: Automated testing, linting, and deployment pipelines
   - CI:
     - Tests with coverage on push and pull requests
