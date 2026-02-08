@@ -1,6 +1,8 @@
 """MCP server."""
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP, settings
 
@@ -16,16 +18,28 @@ def build_server(config: MemoryConfig) -> FastMCP:
     logger.info(f"Initializing '{config.name}' MCP server...")
     settings.show_server_banner = False
 
+    # Build engine and canonical store
+    engine, store = get_engine(config)
+
+    # Close the canonical store on shutdown
+    @asynccontextmanager
+    async def lifespan(_: FastMCP) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            logger.info("Closing canonical store...")
+            await store.close()
+
     # Build mcp server and authorization provider
     auth_provider = build_auth_provider(config)
     mcp = FastMCP(
         name=config.name,
         instructions=config.instructions,
         auth=auth_provider,
+        lifespan=lifespan,
     )
 
-    # Create memory engine and add supported tools
-    engine = get_engine(config)
+    # Register supported tools
     for op in engine.supported_operations:
         logger.debug(f"Adding tool: {op.method_name}")
         mcp.add_tool(getattr(engine, op.method_name))

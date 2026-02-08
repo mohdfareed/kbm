@@ -2,6 +2,7 @@
 
 __all__: list[str] = []
 
+import hashlib
 import logging
 from collections.abc import Callable
 from datetime import datetime
@@ -13,7 +14,7 @@ from lightrag import LightRAG
 from lightrag.utils import EmbeddingFunc
 
 from kbm.config import MemoryConfig, RAGAnythingConfig
-from kbm.store import CanonicalStore
+from kbm.store import CanonStore
 
 from . import schema
 from .base_engine import EngineBase, Operation
@@ -51,10 +52,16 @@ def resolve_provider(
 class RAGAnythingEngine(EngineBase):
     logger = logging.getLogger(__name__)
     supported_operations = frozenset(
-        {Operation.INFO, Operation.QUERY, Operation.INSERT, Operation.INSERT_FILE}
+        {
+            Operation.INFO,
+            Operation.QUERY,
+            Operation.INSERT,
+            Operation.INSERT_FILE,
+            Operation.LIST_RECORDS,
+        }
     )
 
-    def __init__(self, config: "MemoryConfig", store: CanonicalStore) -> None:
+    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
         super().__init__(config, store)
 
         self.config = config.rag_anything
@@ -72,9 +79,10 @@ class RAGAnythingEngine(EngineBase):
     # MARK: Hook overrides
 
     async def _info(self) -> schema.InfoResponse:
+        count = await self._store.count_records()
         return schema.InfoResponse(
             engine="rag-anything",
-            records=-1,  # Not tracked
+            records=count,
             metadata={
                 "query_mode": self.config.query_mode,
                 "llm_model": self.config.llm_model,
@@ -87,10 +95,14 @@ class RAGAnythingEngine(EngineBase):
         rag = self._get_rag(await self._get_lightrag())
         result = await rag.aquery_vlm_enhanced(query, mode=self.config.query_mode)
 
+        # RAG returns a single synthesized answer, not individual records.
+        # The ID is derived from the query for traceability.
         return schema.QueryResponse(
             results=[
                 schema.QueryResult(
-                    id="rag", content=str(result), created_at=datetime.now()
+                    id=hashlib.sha256(query.encode()).hexdigest()[:16],
+                    content=str(result),
+                    created_at=datetime.now(),
                 )
             ]
             if result
@@ -128,6 +140,13 @@ class RAGAnythingEngine(EngineBase):
         return schema.InsertResponse(id=result.id, message=f"Ingested: {path.name}")
 
     # MARK: Internal
+
+    def _provider_kwargs(self) -> dict[str, Any]:
+        """Extra kwargs required by the active provider (e.g. api_version)."""
+        extra: dict[str, Any] = {}
+        if self._api_version:  # Azure
+            extra["api_version"] = self._api_version
+        return extra
 
     def _get_rag(self, lightrag: LightRAG) -> raganything.RAGAnything:
         if self._rag is None:
@@ -199,10 +218,3 @@ class RAGAnythingEngine(EngineBase):
             **self._provider_kwargs(),
             **kwargs,
         )
-
-    def _provider_kwargs(self) -> dict[str, Any]:
-        """Extra kwargs required by the active provider (e.g. api_version)."""
-        extra: dict[str, Any] = {}
-        if self._api_version:
-            extra["api_version"] = self._api_version
-        return extra

@@ -2,10 +2,10 @@
 
 __all__ = [
     "Base",
-    "CanonicalStore",
+    "CanonStore",
     "ContentType",
     "Record",
 ]
 
-from kbm.store.canonical import CanonicalStore
+from kbm.store.canonical import CanonStore
 from kbm.store.models import Base, ContentType, Record

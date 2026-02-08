@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import String, Text
@@ -29,6 +29,4 @@ class Record(Base):
         String(32), default=ContentType.TEXT.value
     )
     source: Mapped[str | None] = mapped_column(String(256), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now())

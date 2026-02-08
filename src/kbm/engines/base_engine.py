@@ -18,7 +18,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.tools.function_tool import tool
 
 from kbm.config import MemoryConfig
-from kbm.store import CanonicalStore
+from kbm.store import CanonStore
 
 from . import schema
 
@@ -54,7 +54,7 @@ class EngineBase(ABC):
 
     # MARK: Initialization
 
-    def __init__(self, config: "MemoryConfig", store: CanonicalStore) -> None:
+    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
         self.logger.info(f"Initializing {config.engine} engine...")
         self._config = config
         self._store = store

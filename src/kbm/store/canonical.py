@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from .models import Base, ContentType, Record
 
 
-class CanonicalStore:
+class CanonStore:
     """Async SQLite storage for canonical records and file attachments."""
 
     def __init__(self, db_url: str, attachments_path: Path) -> None:

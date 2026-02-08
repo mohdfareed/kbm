@@ -5,31 +5,31 @@ from pathlib import Path
 
 import pytest
 
-from kbm.store import CanonicalStore
+from kbm.store import CanonStore
 from kbm.store.models import ContentType
 
 
 @pytest.fixture
-async def store(tmp_path: Path) -> AsyncGenerator[CanonicalStore, None]:
+async def store(tmp_path: Path) -> AsyncGenerator[CanonStore, None]:
     """Create a canonical store with temp database."""
     data_path = tmp_path / "data"
     attachments_path = data_path / "attachments"
     db_path = data_path / "store.db"
     data_path.mkdir(parents=True, exist_ok=True)
-    s = CanonicalStore(
+    s = CanonStore(
         f"sqlite+aiosqlite:///{db_path}", attachments_path=attachments_path
     )
     yield s
     await s.close()
 
 
-class TestCanonicalStore:
+class TestCanonStore:
     """Core store operations."""
 
     async def test_initialize_creates_db(self, tmp_path: Path) -> None:
         """Initialize creates the database file."""
         db_path = tmp_path / "canonical.db"
-        store = CanonicalStore(
+        store = CanonStore(
             f"sqlite+aiosqlite:///{db_path}",
             attachments_path=tmp_path / "attachments",
         )
@@ -37,18 +37,18 @@ class TestCanonicalStore:
         assert db_path.exists()
         await store.close()
 
-    async def test_insert_record(self, store: CanonicalStore) -> None:
+    async def test_insert_record(self, store: CanonStore) -> None:
         """Insert returns record ID."""
         rid = await store.insert_record("test content")
         assert rid
         assert len(rid) == 36  # UUID format
 
-    async def test_insert_with_custom_id(self, store: CanonicalStore) -> None:
+    async def test_insert_with_custom_id(self, store: CanonStore) -> None:
         """Insert with custom ID uses that ID."""
         rid = await store.insert_record("test content", doc_id="custom-id")
         assert rid == "custom-id"
 
-    async def test_get_record(self, store: CanonicalStore) -> None:
+    async def test_get_record(self, store: CanonStore) -> None:
         """Get retrieves inserted record."""
         rid = await store.insert_record("test content", doc_id="test-id")
         record = await store.get_record(rid)
@@ -57,22 +57,22 @@ class TestCanonicalStore:
         assert record.content == "test content"
         assert record.content_type == ContentType.TEXT
 
-    async def test_get_nonexistent(self, store: CanonicalStore) -> None:
+    async def test_get_nonexistent(self, store: CanonStore) -> None:
         """Get returns None for nonexistent record."""
         record = await store.get_record("nonexistent")
         assert record is None
 
-    async def test_delete_record(self, store: CanonicalStore) -> None:
+    async def test_delete_record(self, store: CanonStore) -> None:
         """Delete removes record."""
         rid = await store.insert_record("test content", doc_id="to-delete")
         assert await store.delete_record(rid)
         assert await store.get_record(rid) is None
 
-    async def test_delete_nonexistent(self, store: CanonicalStore) -> None:
+    async def test_delete_nonexistent(self, store: CanonStore) -> None:
         """Delete returns False for nonexistent record."""
         assert not await store.delete_record("nonexistent")
 
-    async def test_list_records(self, store: CanonicalStore) -> None:
+    async def test_list_records(self, store: CanonStore) -> None:
         """List returns all records."""
         await store.insert_record("first", doc_id="r1")
         await store.insert_record("second", doc_id="r2")
@@ -82,7 +82,7 @@ class TestCanonicalStore:
         ids = {r.id for r in records}
         assert ids == {"r1", "r2"}
 
-    async def test_list_with_pagination(self, store: CanonicalStore) -> None:
+    async def test_list_with_pagination(self, store: CanonStore) -> None:
         """List respects limit and offset."""
         for i in range(5):
             await store.insert_record(f"content-{i}", doc_id=f"r{i}")
@@ -90,14 +90,14 @@ class TestCanonicalStore:
         records = await store.list_records(limit=2, offset=1)
         assert len(records) == 2
 
-    async def test_count_records(self, store: CanonicalStore) -> None:
+    async def test_count_records(self, store: CanonStore) -> None:
         """Count returns total record count."""
         assert await store.count_records() == 0
         await store.insert_record("first")
         await store.insert_record("second")
         assert await store.count_records() == 2
 
-    async def test_search_records(self, store: CanonicalStore) -> None:
+    async def test_search_records(self, store: CanonStore) -> None:
         """Search finds matching records."""
         await store.insert_record("hello world", doc_id="r1")
         await store.insert_record("goodbye world", doc_id="r2")
@@ -111,7 +111,7 @@ class TestFileInserts:
     """File insert operations - always copy to attachments/."""
 
     async def test_insert_local_file(
-        self, store: CanonicalStore, tmp_path: Path
+        self, store: CanonStore, tmp_path: Path
     ) -> None:
         """Local file insert copies file to attachments/ and stores relative path."""
         test_file = tmp_path / "test.txt"
@@ -132,7 +132,7 @@ class TestFileInserts:
         assert not record.content.startswith("attachments/")
         assert record.source == str(test_file)
 
-    async def test_insert_base64_file(self, store: CanonicalStore) -> None:
+    async def test_insert_base64_file(self, store: CanonStore) -> None:
         """Base64 file insert saves to attachments/ and stores relative path."""
         import base64
 
@@ -150,7 +150,7 @@ class TestFileInserts:
         assert record.source == "test.txt"
 
     async def test_file_deduplication(
-        self, store: CanonicalStore, tmp_path: Path
+        self, store: CanonStore, tmp_path: Path
     ) -> None:
         """Inserting the same file twice deduplicates in attachments/."""
         test_file = tmp_path / "doc.txt"
@@ -161,12 +161,12 @@ class TestFileInserts:
 
         assert path1 == path2  # same deduped path
 
-    async def test_file_not_found(self, store: CanonicalStore) -> None:
+    async def test_file_not_found(self, store: CanonStore) -> None:
         """Insert file with nonexistent path raises FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
             await store.insert_file("/nonexistent/file.txt")
 
-    async def test_relative_path_rejected(self, store: CanonicalStore) -> None:
+    async def test_relative_path_rejected(self, store: CanonStore) -> None:
         """Insert file with relative path raises ValueError."""
         with pytest.raises(ValueError, match="absolute"):
             await store.insert_file("relative/path.txt")

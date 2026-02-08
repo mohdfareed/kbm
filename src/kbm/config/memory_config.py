@@ -49,32 +49,34 @@ class MemoryConfig(NamedFileConfig):
     @property
     def data_path(self) -> Path:
         """Root directory for this memory's data."""
-        path = app_settings.data_root / self.name
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        return app_settings.data_root / self.name
 
     @computed_field
     @property
     def log_file(self) -> Path:
-        """Path to log file. Parent directory is ensured by app_settings.logs_path."""
+        """Path to log file."""
         return app_settings.logs_path / f"{self.name}.log"
 
     @computed_field
     @property
     def engine_data_path(self) -> Path:
         """Directory for engine-specific data."""
-        return self.data_path / self.engine.value  # Created by engine if needed
+        return self.data_path / self.engine.value
 
     @computed_field
     @property
     def attachments_path(self) -> Path:
         """Directory for file attachments (inside data_path)."""
-        path = self.data_path / "attachments"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        return self.data_path / "attachments"
 
     @computed_field
     @property
     def database_url(self) -> str:
         """Database URL for canonical storage."""
         return f"sqlite+aiosqlite:///{self.data_path / 'store.db'}"
+
+    def ensure_dirs(self) -> None:
+        """Create all memory directories. Call once during startup."""
+        app_settings.ensure_dirs()
+        self.data_path.mkdir(parents=True, exist_ok=True)
+        self.attachments_path.mkdir(parents=True, exist_ok=True)

@@ -9,7 +9,7 @@ from fastmcp.exceptions import ToolError
 
 from kbm.engines.base_engine import EngineBase
 from kbm.engines.chat_history import ChatHistoryEngine
-from kbm.store import CanonicalStore
+from kbm.store import CanonStore
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ async def engine(tmp_path: Path) -> AsyncGenerator[EngineBase, None]:
     data_path.mkdir(parents=True, exist_ok=True)
     db_url = f"sqlite+aiosqlite:///{data_path / 'store.db'}"
 
-    store = CanonicalStore(db_url, attachments_path=attachments_path)
+    store = CanonStore(db_url, attachments_path=attachments_path)
     eng = ChatHistoryEngine(config, store)
     yield eng
     await store.close()

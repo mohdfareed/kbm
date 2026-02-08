@@ -65,6 +65,7 @@ def callback(
     app_settings.debug = debug
     if home is not None:
         app_settings.home = home.expanduser().resolve()
+    app_settings.ensure_dirs()
     setup_logging()
 
     if version:

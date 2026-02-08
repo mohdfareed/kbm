@@ -5,7 +5,7 @@ __all__: list[str] = []
 import logging
 
 from kbm.config import Engine, MemoryConfig
-from kbm.store import CanonicalStore
+from kbm.store import CanonStore
 
 from . import schema
 from .base_engine import EngineBase, Operation
@@ -15,7 +15,7 @@ class ChatHistoryEngine(EngineBase):
     logger = logging.getLogger(__name__)
     supported_operations = frozenset(Operation)  # all operations
 
-    def __init__(self, config: "MemoryConfig", store: CanonicalStore) -> None:
+    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
         super().__init__(config, store)
 
     async def _info(self) -> schema.InfoResponse:
