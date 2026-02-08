@@ -1,6 +1,7 @@
 """Named configuration base class."""
 
 import json
+import logging
 from abc import ABC
 from pathlib import Path
 from typing import Self, cast
@@ -15,6 +16,10 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from kbm.config import app_settings
+
+logger = logging.getLogger(app_settings.name + ".config")
 
 
 class BaseConfig(BaseSettings, ABC):
@@ -106,7 +111,10 @@ class NamedFileConfig(BaseConfig, ABC):
         for config in app_settings.memories:
             try:
                 cfg = cls.from_file(config, **kwargs)
-            except Exception:
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load config '{config.name}': {e}", exc_info=True
+                )
                 continue  # skip invalid config files
 
             if cfg.name == name:

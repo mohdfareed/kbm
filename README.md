@@ -87,6 +87,21 @@ For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` fla
 
 ## TODO
 
+- [ ] **Federation Engine**: Query multiple memories and merge results.
+  - Config takes list of memory names or remote URLs.
+  - Memories listed by name are started and queried locally.
+  - Remote URLs are queried via an MCP client.
+  - Server queries each memory's index and merges results by relevance.
+- [ ] **Authorization**: Implement role-based access control for HTTP transport.
+  - Define permissions per tool.
+  - Add config to define role-permission and user-role mappings.
+  - Define users using tokens based on the authentication provider.
+    - For example, email addresses/domain-wildcards for GitHub OAuth users.
+    - For local auth, generate random tokens mapped to roles and provided to clients then sent back with requests (research if possible).
+  - Implement middleware to check permissions on each request.
+- [ ] **Re-indexing Command**: CLI command to rebuild engine indexes from canonical storage.
+  - `kbm reindex <memory_name>`: Rebuilds the engine index for the specified memory using records from canonical storage.
+  - Migration supported by changing engine type and re-indexing.
 - [ ] **CI/CD (*Quality*)**: Automated testing, linting, and deployment pipelines
   - CI:
     - Tests with coverage on push and pull requests
@@ -95,3 +110,4 @@ For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` fla
     - Automated releases on tags
     - Publish to PyPI
     - Build and publish Docker images to GitHub Container Registry
+- [ ] **Pre-commit hooks (*Quality*)**: Run formatters, linters, and type checkers before commits.

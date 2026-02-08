@@ -89,7 +89,7 @@ def _render_tool(tool: Tool) -> None:
         tbl = Table(header_style="dim", expand=True, pad_edge=False)
         tbl.add_column("Parameter")
         tbl.add_column("Type")
-        tbl.add_column("Req")
+        tbl.add_column("Req.")
         tbl.add_column("Description")
         for pname, pschema in props.items():
             tbl.add_row(

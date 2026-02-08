@@ -2,6 +2,7 @@
 
 __all__ = ["app", "main"]
 
+import logging
 import sys
 from pathlib import Path
 
@@ -16,6 +17,8 @@ MemoryNameArg = typer.Argument(Path.cwd().name, help="Memory name.")
 
 console = Console()
 err_console = Console(stderr=True)
+logger = logging.getLogger(f"{app_settings.name}.cli")
+
 app = typer.Typer(
     name=app_settings.name,
     help=app_settings.description,
@@ -31,7 +34,7 @@ def main(prog_name: str | None = None) -> None:
         app(prog_name=prog_name)
     except Exception as e:
         if app_settings.debug:
-            err_console.print_exception()
+            logger.error(f"An error occurred: {e}", exc_info=True)
         else:
             err_console.print(f"[bold red]Error:[/] {e}")
         sys.exit(1)
