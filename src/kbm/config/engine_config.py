@@ -1,10 +1,8 @@
 """Engine configurations and enums."""
 
-import os
 from enum import Enum
 
 from pydantic import BaseModel
-from pydantic_settings import SettingsConfigDict
 
 
 class Engine(str, Enum):
@@ -12,54 +10,24 @@ class Engine(str, Enum):
 
     CHAT_HISTORY = "chat-history"
     RAG_ANYTHING = "rag-anything"
-    FEDERATION = "federation"
 
 
-class EngineConfig(BaseModel):
-    model_config = SettingsConfigDict(extra="forbid")
-
-
-class CanonicalConfig(BaseModel):
-    """Canonical storage configuration."""
-
-    model_config = SettingsConfigDict(extra="forbid")
-
-    # Database URL (defaults to SQLite, can be PostgreSQL, MySQL, etc.)
-    # Examples:
-    #   sqlite+aiosqlite:///path/to/db.sqlite
-    #   postgresql+asyncpg://user:pass@host/db
-    database_url: str | None = None
-
-
-# MARK: Engine-specific Configs
-
-
-class ChatHistoryConfig(EngineConfig):
-    """Chat history engine configuration."""
-
-
-class RAGAnythingConfig(EngineConfig):
+class RAGAnythingConfig(BaseModel):
     """RAG-Anything engine configuration."""
 
-    # OpenAI settings
-    api_key: str | None = os.environ.get("OPENAI_API_KEY", None)
-    base_url: str | None = os.environ.get("OPENAI_BASE_URL", None)
+    class Provider(str, Enum):
+        ANTHROPIC = "anthropic"
+        AZURE = "azure"
+        OPENAI = "openai"
+
+    # Provider settings
+    provider: Provider = Provider.OPENAI
+    api_key: str | None = None  # env var default set by provider
+    base_url: str | None = None  # env var default set by provider
+    api_version: str | None = None  # Azure only
 
     # Model settings
+    query_mode: str = "mix"
     llm_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-large"
     embedding_dim: int = 3072
-    query_mode: str = "mix"  # rag-anything default
-
-    # Capabilities
-    enable_image_processing: bool = True
-    enable_table_processing: bool = True
-    enable_equation_processing: bool = True
-
-
-class FederationConfig(EngineConfig):
-    """Federation engine configuration."""
-
-    memories: list[str] = []  # Memory names to load
-    configs: list[str] = []  # Config file paths to load
-    remotes: list[str] = []  # MCP server URLs (http/https)

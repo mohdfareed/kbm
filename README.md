@@ -5,16 +5,14 @@ Persistent memory for LLMs via the [Model Context Protocol](https://modelcontext
 ## Install
 
 ```sh
+uv tool install git+https://github.com/mohdfareed/kbm
 pipx install git+https://github.com/mohdfareed/kbm
 ```
 
 ## Quick Start
 
 ```sh
-# Project memory (creates .kbm.yaml)
-kbm init && kbm start
-
-# Global memory
+kbm init && kbm start # defaults to cwd name
 kbm init notes && kbm start notes
 ```
 
@@ -39,22 +37,12 @@ engine: chat-history  # or rag-anything
 
 - `chat-history` - Simple JSON storage for conversations
 - `rag-anything` - Multi-modal RAG with LightRAG
-- `federation` - Aggregates queries across multiple memories, local and remote
 
 **Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
 
 - Source of truth for all records and attachments
 - Enables engine migration without data loss
 - Allows rebuilding engine indexes from durable storage
-
-**Federation** enables querying multiple knowledge bases as one:
-
-- Aggregates results from local memories and remote MCP servers
-- Configures sources via:
-  - `federation.memories` - names of local/global memories,
-  - `federation.configs` - paths to config files, and
-  - `federation.remotes` - MCP server URLs
-- Read-only: can only query remote memories
 
 ### Docker
 

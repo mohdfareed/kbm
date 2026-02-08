@@ -1,20 +1,17 @@
 """Memory configuration."""
 
+import logging
 from enum import Enum
 from pathlib import Path
 
 from pydantic import computed_field
 
-from .app_config import AppConfig
 from .app_settings import app_settings
-from .auth_config import AuthConfig, GithubAuthConfig
-from .engine_config import (
-    CanonicalConfig,
-    ChatHistoryConfig,
-    Engine,
-    FederationConfig,
-    RAGAnythingConfig,
-)
+from .auth_config import AuthProvider, GithubAuthConfig
+from .base_config import NamedFileConfig
+from .engine_config import Engine, RAGAnythingConfig
+
+logger = logging.getLogger(__name__)
 
 
 class Transport(str, Enum):
@@ -24,11 +21,11 @@ class Transport(str, Enum):
     HTTP = "http"
 
 
-class MemoryConfig(AppConfig):
+class MemoryConfig(NamedFileConfig):
     """The configuration for a knowledge base memory."""
 
+    # memory settings
     name: str
-    server_name: str = "memories"
     instructions: str = (
         "You have access to this project's knowledge base - a persistent memory "
         "that spans conversations, tools, and time. Query it to recall context "
@@ -36,63 +33,51 @@ class MemoryConfig(AppConfig):
         "future conversations."
     )
 
-    engine: Engine = Engine.CHAT_HISTORY
-    canonical: CanonicalConfig = CanonicalConfig()
-    chat_history: ChatHistoryConfig = ChatHistoryConfig()
-    rag_anything: RAGAnythingConfig = RAGAnythingConfig()
-    federation: FederationConfig = FederationConfig()
-
+    # server settings
     transport: Transport = Transport.STDIO
-    auth: AuthConfig | GithubAuthConfig = AuthConfig()
     host: str = "0.0.0.0"
     port: int = 8000
+
+    # engine settings
+    engine: Engine = Engine.CHAT_HISTORY
+    rag_anything: RAGAnythingConfig = RAGAnythingConfig()
+
+    # authentication settings
+    auth: AuthProvider = AuthProvider.NONE
+    github_auth: GithubAuthConfig = GithubAuthConfig()
 
     # MARK: Computed Properties
 
     @computed_field
     @property
-    def is_global(self) -> bool:
-        return self.file_path.parent == app_settings.memories_path
-
-    @computed_field
-    @property
     def data_path(self) -> Path:
-        return app_settings.data_root / self.name
+        """Root directory for this memory's data."""
+        path = app_settings.data_root / self.name
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @computed_field
     @property
-    def uploads_path(self) -> Path:
-        """Directory for uploaded file attachments."""
-        return self.data_path / "uploads"
+    def log_file(self) -> Path:
+        """Path to log file. Parent directory is ensured by app_settings.logs_path."""
+        return app_settings.logs_path / f"{self.name}.log"
 
     @computed_field
     @property
-    def canonical_url(self) -> str:
+    def engine_data_path(self) -> Path:
+        """Directory for engine-specific data."""
+        return self.data_path / self.engine.value  # Created by engine if needed
+
+    @computed_field
+    @property
+    def attachments_path(self) -> Path:
+        """Directory for file attachments."""
+        path = self.data_path / "attachments"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @computed_field
+    @property
+    def database_url(self) -> str:
         """Database URL for canonical storage."""
-        if self.canonical.database_url:
-            return self.canonical.database_url
-        db_path = self.data_path / "canonical.db"
-        return f"sqlite+aiosqlite:///{db_path}"
-
-    # MARK: Name Resolution
-
-    @classmethod
-    def from_name(cls, name: str | None) -> "MemoryConfig":
-        if name is None:
-            local_files = app_settings.local_config_files()
-            if len(local_files) > 0:
-                return cls.from_config(local_files[0])
-
-            raise FileNotFoundError("No memory specified and no local memory found.")
-
-        for config in app_settings.local_config_files():
-            cfg = cls.from_config(config)
-            if cfg.name == name:
-                return cfg
-
-        for config in app_settings.global_config_files():
-            cfg = cls.from_config(config)
-            if cfg.name == name:
-                return cfg
-
-        raise FileNotFoundError(f"Memory not found: {name}")
+        return f"sqlite+aiosqlite:///{self.data_path / 'store.db'}"

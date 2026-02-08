@@ -4,54 +4,44 @@ import shutil
 
 import typer
 
+from kbm.cli.helpers import print_orphaned
 from kbm.config import MemoryConfig, app_settings
 
-from . import app, console
+from . import MemoryNameArg, app, console
+from .helpers import print_orphaned, print_summary
 
 
 @app.command()
 def delete(
-    name: str = typer.Argument(..., help="Memory name to delete."),
-    yes: bool = typer.Option(False, "-y", "--yes", help="Skip confirmation."),
-    keep_data: bool = typer.Option(False, "--keep-data", help="Keep data directory."),
+    name: str = MemoryNameArg,
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation."),
 ) -> None:
-    """Delete a memory."""
+    """Permanently delete a memory and all its data."""
     cfg = None
-    data_path = app_settings.data_root / name
 
-    try:
+    try:  # Load config from file
         cfg = MemoryConfig.from_name(name)
         data_path = cfg.data_path
+        print_summary(cfg)
+
+    # Load data if no config
     except FileNotFoundError:
-        pass  # Try orphaned data
+        data_path = app_settings.data_root / name
+        if not data_path.exists():
+            raise  # Memory not found
+        print_orphaned(data_path)
 
-    has_config = cfg is not None
-    has_data = data_path.exists()
-
-    if not has_config and not has_data:
-        raise FileNotFoundError(name)
-
-    if not has_config and keep_data:
-        raise typer.BadParameter("No config found and --keep-data is set.")
-
-    # Build confirmation message
-    if has_config and has_data and not keep_data:
-        msg = f"Delete [bold]{name}[/bold] config and data?"
-    elif has_config and has_data and keep_data:
-        msg = f"Delete [bold]{name}[/bold] config? [dim](keeping data)[/dim]"
-    elif has_config and not has_data:
-        msg = f"Delete [bold]{name}[/bold] config? [dim](no data found)[/dim]"
-    else:  # not has_config and has_data
-        msg = f"Delete orphaned data for [bold]{name}[/bold]?"
-
+    # Confirm deletion
     if not yes:
-        console.print(msg)
-        typer.confirm("Continue?", default=False, abort=True)
+        typer.confirm(
+            f"Delete memory '{name}' and all its data?",
+            default=False,
+            abort=True,
+        )
 
-    if has_config and cfg:
+    # Delete config and data files
+    if cfg and cfg.file_path.exists():
         cfg.file_path.unlink()
-        console.print(f"[green]✓[/green] Deleted config")
-
-    if has_data and not keep_data:
+    if data_path.exists():
         shutil.rmtree(data_path)
-        console.print(f"[green]✓[/green] Deleted data")
+    console.print(f"Deleted '{name}'.")

@@ -1,32 +1,25 @@
 """Start command."""
 
-from pathlib import Path
-
 import typer
 
 from kbm.config import MemoryConfig, Transport
 from kbm.server import run_server
 
-from . import app, console
+from . import MemoryNameArg, app
+from .helpers import print_status, setup_file_logging
 
 
 @app.command()
 def start(
-    name: str | None = typer.Argument(None, help="Memory name (omit for local)."),
-    config: Path | None = typer.Option(
-        None, "-c", "--config", help="Config file path."
-    ),
+    name: str = MemoryNameArg,
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
-    port: int | None = typer.Option(
-        None, "-p", "--port", help="Ignored by containers."
-    ),
+    port: int | None = typer.Option(None, "-p", "--port"),
 ) -> None:
     """Start the MCP server."""
-    if name and config:
-        raise typer.BadParameter("Specify either name or --config, not both.")
-    cfg = MemoryConfig.from_config(config) if config else MemoryConfig.from_name(name)
+    cfg = MemoryConfig.from_name(name)
 
+    # Handle CLI overrides
     if transport:
         cfg.transport = transport
     if host:
@@ -34,13 +27,7 @@ def start(
     if port:
         cfg.port = port
 
-    # Header
-    console.print(f"Starting server for memory:")
-    match cfg.transport:
-        case Transport.STDIO:
-            engine = f"• {cfg.engine.value} • stdio"
-        case Transport.HTTP:
-            engine = f"• {cfg.engine.value} • http://{cfg.host}:{cfg.port}"
-    console.print(f"[bold]{cfg.name}[/bold] [dim]{engine}[/dim]")
-
+    # Start server with file logging
+    print_status(cfg)
+    setup_file_logging(cfg.log_file)
     run_server(cfg)

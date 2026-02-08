@@ -1,82 +1,74 @@
 """CLI package."""
 
-__all__ = ["app", "console", "err_console", "main"]
+__all__ = ["app", "main"]
 
-import logging
 import sys
+from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.logging import RichHandler
 
 from kbm.config import app_settings
 
-# Separate consoles for stdout/stderr (enables proper piping)
+MemoryNameArg = typer.Argument(Path.cwd().name, help="Memory name.")
+
 console = Console()
 err_console = Console(stderr=True)
-
 app = typer.Typer(
     name=app_settings.name,
     help=app_settings.description,
     no_args_is_help=True,
-    # rich_markup_mode=None,
-    rich_markup_mode="rich",
+    invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-
-# App logger (not root - avoids library noise)
-log = logging.getLogger("kbm")
-
-
-def _version_callback(value: bool) -> None:
-    if value:
-        typer.echo(f"{app_settings.name} {app_settings.version}")
-        raise typer.Exit(code=0)
 
 
 @app.callback()
 def callback(
     debug: bool = typer.Option(
-        app_settings.debug, "-d", "--debug", help="Enable debug logging ($KBM_DEBUG)."
+        app_settings.debug, "-d", "--debug", help="Enable debug logging."
     ),
+    home: Path | None = typer.Option(
+        app_settings.home, "-r", "--root", help="Override home directory."
+    ),
+    # Subcommands
     version: bool = typer.Option(
-        False,
-        "-v",
-        "--version",
-        help="Show version and exit.",
-        callback=_version_callback,
-        is_eager=True,
+        False, "-v", "--version", help="Show version and exit."
+    ),
+    settings: bool = typer.Option(
+        False, "-s", "--settings", help="Show app settings overrides and exit."
+    ),
+    full_settings: bool = typer.Option(
+        False, "-S", "--all-settings", help="Show all app settings and exit."
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
-    app_settings.debug = debug or app_settings.debug
+    from .helpers import setup_logging
 
-    level = logging.DEBUG if app_settings.debug else logging.INFO
-    handler = RichHandler(
-        console=err_console,
-        show_time=app_settings.debug,
-        show_path=app_settings.debug,
-        rich_tracebacks=True,
-        markup=True,
-        keywords=[],  # Highlight keywords
-    )
-    handler.setFormatter(logging.Formatter("[dim]%(name)s:[/dim] %(message)s"))
+    app_settings.debug = debug
+    if home is not None:
+        app_settings.home = home.expanduser().resolve()
+    setup_logging()
 
-    logging.root.setLevel(level)
-    logging.root.addHandler(handler)
+    if version:
+        console.print(f"{app_settings.name} {app_settings.version}")
+        sys.exit(0)
 
-    # Logging levels for libraries
-    logging.getLogger("fastmcp").handlers = [handler]
-    logging.getLogger("mcp").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn").setLevel(logging.WARNING)
-    logging.getLogger("fastmcp").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn.error").setLevel(logging.CRITICAL)
+    if settings:
+        for key, value in app_settings.dump(full=False).items():
+            console.print(f"{key}={value}")
+        sys.exit(0)
+
+    if full_settings:
+        for key, value in app_settings.dump(full=True).items():
+            console.print(f"{key}={value}")
+        sys.exit(0)
 
 
 @app.command()
 def home() -> None:
     """Print application home directory."""
-    typer.echo(app_settings.data_root)
+    console.print(app_settings.home)
 
 
 def main(prog_name: str | None = None) -> None:
@@ -88,7 +80,7 @@ def main(prog_name: str | None = None) -> None:
             err_console.print_exception()
         else:
             err_console.print(f"[bold red]Error:[/] {e}")
-        raise sys.exit(1)
+        sys.exit(1)
 
 
 # Register commands (order determines help display)
