@@ -1,0 +1,34 @@
+name: Update Pre-commit Hooks
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Monday 8am UTC
+  workflow_dispatch: # allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update Hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --dev
+
+      - name: Update pre-commit hooks
+        run: uv run pre-commit autoupdate
+
+      - name: Create PR if changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Hooks: Update pre-commit hooks"
+          title: "Hooks: Update pre-commit hooks"
+          branch: auto/pre-commit-update
+          delete-branch: true
+          body: |
+            Automated pre-commit hook version update via `pre-commit autoupdate`.

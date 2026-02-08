@@ -8,4 +8,7 @@ fi
 
 cd "$(dirname "$0")/.."
 uv lock --upgrade
-uv sync
+uv sync --dev
+
+# Install pre-commit hooks
+uv run pre-commit install

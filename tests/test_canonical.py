@@ -16,9 +16,7 @@ async def store(tmp_path: Path) -> AsyncGenerator[CanonStore, None]:
     attachments_path = data_path / "attachments"
     db_path = data_path / "store.db"
     data_path.mkdir(parents=True, exist_ok=True)
-    s = CanonStore(
-        f"sqlite+aiosqlite:///{db_path}", attachments_path=attachments_path
-    )
+    s = CanonStore(f"sqlite+aiosqlite:///{db_path}", attachments_path=attachments_path)
     yield s
     await s.close()
 
@@ -110,9 +108,7 @@ class TestCanonStore:
 class TestFileInserts:
     """File insert operations - always copy to attachments/."""
 
-    async def test_insert_local_file(
-        self, store: CanonStore, tmp_path: Path
-    ) -> None:
+    async def test_insert_local_file(self, store: CanonStore, tmp_path: Path) -> None:
         """Local file insert copies file to attachments/ and stores relative path."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world")
@@ -149,9 +145,7 @@ class TestFileInserts:
         assert not record.content.startswith("attachments/")
         assert record.source == "test.txt"
 
-    async def test_file_deduplication(
-        self, store: CanonStore, tmp_path: Path
-    ) -> None:
+    async def test_file_deduplication(self, store: CanonStore, tmp_path: Path) -> None:
         """Inserting the same file twice deduplicates in attachments/."""
         test_file = tmp_path / "doc.txt"
         test_file.write_text("same content")
