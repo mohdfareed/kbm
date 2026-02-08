@@ -25,6 +25,18 @@ app = typer.Typer(
 )
 
 
+def main(prog_name: str | None = None) -> None:
+    """Entry point."""
+    try:
+        app(prog_name=prog_name)
+    except Exception as e:
+        if app_settings.debug:
+            err_console.print_exception()
+        else:
+            err_console.print(f"[bold red]Error:[/] {e}")
+        sys.exit(1)
+
+
 @app.callback()
 def callback(
     debug: bool = typer.Option(
@@ -33,15 +45,15 @@ def callback(
     home: Path | None = typer.Option(
         None, "-r", "--root", help="Override home directory."
     ),
-    # Subcommands
-    version: bool = typer.Option(
-        False, "-v", "--version", help="Show version and exit."
-    ),
+    # Meta options
     settings: bool = typer.Option(
         False, "-s", "--settings", help="Show app settings overrides and exit."
     ),
     full_settings: bool = typer.Option(
         False, "-S", "--all-settings", help="Show all app settings and exit."
+    ),
+    version: bool = typer.Option(
+        False, "-v", "--version", help="Show version and exit."
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
@@ -67,25 +79,14 @@ def callback(
         sys.exit(0)
 
 
+# MARK: Command Registration
+
+# Register commands (order determines help display)
+# isort: off
+from kbm.cli import init, start, list, status, delete, inspect  # noqa: E402
+
+
 @app.command()
 def home() -> None:
     """Print application home directory."""
     console.print(app_settings.home)
-
-
-def main(prog_name: str | None = None) -> None:
-    """Entry point."""
-    try:
-        app(prog_name=prog_name)
-    except Exception as e:
-        if app_settings.debug:
-            err_console.print_exception()
-        else:
-            err_console.print(f"[bold red]Error:[/] {e}")
-        sys.exit(1)
-
-
-# Register commands (order determines help display)
-# isort: off
-from kbm.cli import init, start, status, inspect, list, delete  # noqa: E402
-# isort: on

@@ -26,8 +26,5 @@ def status(
         sys.exit(0)
 
     print_summary(cfg)
-    console.print("\n[dim]Configuration:[/dim]")
-
-    # Print config options with or without defaults
     for line in format_config(cfg.dump(full=full)):
-        console.print(line)
+        console.print(f"  {line}")

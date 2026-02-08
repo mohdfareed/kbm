@@ -15,6 +15,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from rich.logging import RichHandler
+from rich.panel import Panel
 
 from kbm.config import MemoryConfig, Transport, app_settings
 
@@ -70,23 +71,45 @@ def setup_file_logging(log_file: Path) -> None:
     session_logger.info("--- New Session ---")
 
 
+def format_config(data: dict) -> list[str]:
+    """Format a config dict into aligned Rich-markup lines."""
+    lines: list[str] = []
+
+    # Separate top-level scalars from nested sections
+    scalars: list[tuple[str, str]] = []
+    sections: list[tuple[str, list[tuple[str, str]]]] = []
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            items = [(k, str(v)) for k, v in value.items()]
+            if items:
+                sections.append((key, items))
+        else:
+            scalars.append((key, str(value)))
+
+    # Top-level scalars
+    if scalars:
+        w = max(len(k) for k, _ in scalars)
+        lines += [f"[dim]{k:<{w}}[/dim]  {v}" for k, v in scalars]
+
+    # Nested sections
+    for section, items in sections:
+        lines.append(f"[dim]{section}:[/dim]")
+        w = max(len(k) for k, _ in items)
+        lines += [f"  [dim]{k:<{w}}[/dim]  {v}" for k, v in items]
+
+    return lines
+
+
 def print_status(cfg: MemoryConfig) -> None:
-    """Print one-line memory status: icon, file, name, engine."""
+    """Print one-line memory status: icon, name, file, engine, transport."""
     from . import console
 
-    match cfg.transport:
-        case Transport.STDIO:
-            transport = "stdio"
-        case Transport.HTTP:
-            transport = f"http://{cfg.host}:{cfg.port}"
-        case _:
-            transport = cfg.transport.value
-
-    icon = "[green]●[/green]" if cfg.data_path.exists() else "[yellow]●[/yellow]"
     console.print(
-        f"{icon} [bold]{cfg.name}[/bold]"
+        f"{_status_icon(cfg)} [bold]{cfg.name}[/bold]"
         f" • [dim]{cfg.file_path.name}[/dim]"
-        f" • [dim]{cfg.engine.value}[/dim] • [dim]{transport}[/dim]"
+        f" • [dim]{cfg.engine.value}[/dim]"
+        f" • [dim]{_transport_label(cfg)}[/dim]"
     )
 
 
@@ -108,22 +131,38 @@ def print_orphaned(data_dir: Path) -> None:
     )
 
 
-def format_config(data: dict, prefix: str = "") -> list[str]:
-    """Flatten a (possibly nested) config dict into `key=value` lines."""
-    lines: list[str] = []
-    for key, value in data.items():
-        full_key = f"{prefix}{key}" if not prefix else f"{prefix}.{key}"
-        if isinstance(value, dict):
-            lines.extend(format_config(value, full_key))
-        else:
-            lines.append(f"{full_key}={value}")
-    return lines
-
-
 def print_summary(cfg: MemoryConfig) -> None:
-    """Print status line plus config and data paths."""
+    """Print a Panel with memory name, engine, transport, and paths."""
     from . import console
 
-    print_status(cfg)
-    console.print(f"  [dim]Config:[/dim] {cfg.file_path}")
-    console.print(f"  [dim]Data:[/dim]   {cfg.data_path}")
+    title = (
+        f"{_status_icon(cfg)} [bold]{cfg.name}[/bold]"
+        f" • [dim]{cfg.engine.value}[/dim]"
+        f" • [dim]{_transport_label(cfg)}[/dim]"
+    )
+    header = f"[bold]Config:[/bold] {cfg.file_path}"
+    header += f"\n[bold]Data:[/bold]   {cfg.data_path}"
+
+    console.print(
+        Panel(
+            header,
+            title=title,
+            title_align="left",
+            border_style="dim",
+        )
+    )
+
+
+def _transport_label(cfg: MemoryConfig) -> str:
+    """Human-readable transport string."""
+    match cfg.transport:
+        case Transport.STDIO:
+            return "stdio"
+        case Transport.HTTP:
+            return f"http://{cfg.host}:{cfg.port}"
+        case _:
+            return cfg.transport.value
+
+
+def _status_icon(cfg: MemoryConfig) -> str:
+    return "[green]●[/green]" if cfg.data_path.exists() else "[yellow]●[/yellow]"

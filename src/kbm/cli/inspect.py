@@ -1,11 +1,8 @@
 """Inspect command - show what models see via MCP."""
 
 import asyncio
-import json
-import sys
 from dataclasses import dataclass
 
-import typer
 from fastmcp import Client
 from mcp.types import InitializeResult, Tool
 from rich.console import Group, RenderableType
@@ -37,27 +34,10 @@ class ServerView:
 
 
 @app.command()
-def inspect(
-    name: str = MemoryNameArg,
-    json_: bool = typer.Option(
-        False, "--json", help="Output raw MCP protocol data as JSON."
-    ),
-) -> None:
-    """Inspect MCP server tools - show what models see."""
+def inspect(name: str = MemoryNameArg) -> None:
+    """Inspect memory MCP server."""
     cfg = MemoryConfig.from_name(name)
     view = asyncio.run(ServerView.introspect(cfg))
-
-    if json_:
-        data = {
-            "serverInfo": view.init.serverInfo.model_dump(exclude_none=True),
-            "protocolVersion": view.init.protocolVersion,
-            "capabilities": view.init.capabilities.model_dump(exclude_none=True),
-            "instructions": view.init.instructions,
-            "tools": [t.model_dump(exclude_none=True) for t in view.tools],
-        }
-        console.print_json(json.dumps(data))
-        sys.exit(0)
-
     _print_pretty(view)
 
 
