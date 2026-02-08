@@ -1,9 +1,9 @@
 services:
   kbm:
+    image: ghcr.io/mohdfareed/kbm:latest
     build:
       context: https://github.com/mohdfareed/kbm.git
       dockerfile: docker/Dockerfile
-      # image: ghcr.io/mohdfareed/kbm:latest
     restart: unless-stopped
 
     hostname: kbm  # Memory name
