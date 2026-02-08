@@ -12,15 +12,10 @@ __all__ = [
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.logging import RichHandler
 
-from kbm.config import app_settings
-from kbm.config.memory_config import Transport
-
-if TYPE_CHECKING:
-    from kbm.config import MemoryConfig
+from kbm.config import MemoryConfig, Transport, app_settings
 
 
 def setup_logging() -> None:
@@ -74,7 +69,7 @@ def setup_file_logging(log_file: Path) -> None:
     session_logger.info("--- New Session ---")
 
 
-def print_status(cfg: "MemoryConfig") -> None:
+def print_status(cfg: MemoryConfig) -> None:
     """Print one-line memory status: icon, file, name, engine."""
     from . import console
 
@@ -83,6 +78,8 @@ def print_status(cfg: "MemoryConfig") -> None:
             transport = "stdio"
         case Transport.HTTP:
             transport = f"http://{cfg.host}:{cfg.port}"
+        case _:
+            transport = cfg.transport.value
 
     icon = "[green]●[/green]" if cfg.data_path.exists() else "[yellow]●[/yellow]"
     console.print(
@@ -110,7 +107,7 @@ def print_orphaned(data_dir: Path) -> None:
     )
 
 
-def print_summary(cfg: "MemoryConfig") -> None:
+def print_summary(cfg: MemoryConfig) -> None:
     """Print status line plus config and data paths."""
     from . import console
 

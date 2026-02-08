@@ -18,6 +18,7 @@
     "pyright",
     "pytest",
     "raganything",
+    "sessionmaker",
     "sqlalchemy",
     "streamable",
     "typer",

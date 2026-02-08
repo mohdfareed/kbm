@@ -4,7 +4,6 @@ import shutil
 
 import typer
 
-from kbm.cli.helpers import print_orphaned
 from kbm.config import MemoryConfig, app_settings
 
 from . import MemoryNameArg, app, console

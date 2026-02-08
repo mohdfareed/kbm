@@ -1,15 +1,21 @@
 """SQLAlchemy ORM models."""
 
-__all__ = ["Attachment", "Base", "Record"]
-
 from datetime import datetime, timezone
+from enum import StrEnum
 
 from sqlalchemy import String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
+class ContentType(StrEnum):
+    """Record content types. Stored as the string value in SQLite."""
+
+    TEXT = "text"
+    FILE = "file"
+
+
 class Base(DeclarativeBase):
-    """SQLAlchemy declarative base."""
+    """Declarative base for all ORM models. Required by SQLAlchemy 2.0."""
 
 
 class Record(Base):
@@ -19,26 +25,10 @@ class Record(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    content_type: Mapped[str] = mapped_column(String(32), default="text")
-    source: Mapped[str | None] = mapped_column(String(256), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
+    content_type: Mapped[str] = mapped_column(
+        String(32), default=ContentType.TEXT.value
     )
-    updated_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
-class Attachment(Base):
-    """File attachment linked to a record."""
-
-    __tablename__ = "attachments"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    record_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    file_name: Mapped[str] = mapped_column(String(256), nullable=False)
-    file_path: Mapped[str] = mapped_column(String(512), nullable=False)
-    mime_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    size_bytes: Mapped[int | None] = mapped_column(nullable=True)
+    source: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc)
     )

@@ -1,6 +1,5 @@
 """Memory configuration."""
 
-import logging
 from enum import Enum
 from pathlib import Path
 
@@ -10,8 +9,6 @@ from .app_settings import app_settings
 from .auth_config import AuthProvider, GithubAuthConfig
 from .base_config import NamedFileConfig
 from .engine_config import Engine, RAGAnythingConfig
-
-logger = logging.getLogger(__name__)
 
 
 class Transport(str, Enum):
@@ -71,7 +68,7 @@ class MemoryConfig(NamedFileConfig):
     @computed_field
     @property
     def attachments_path(self) -> Path:
-        """Directory for file attachments."""
+        """Directory for file attachments (inside data_path)."""
         path = self.data_path / "attachments"
         path.mkdir(parents=True, exist_ok=True)
         return path

@@ -1,143 +1,108 @@
-"""Async canonical store."""
-
-__all__ = ["CanonicalStore"]
+"""Canonical data store — SQLite source of truth for all records."""
 
 import base64
 import hashlib
-import logging
 import uuid
 from pathlib import Path
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from kbm.store.models import Attachment, Base, Record
+from .models import Base, ContentType, Record
 
 
 class CanonicalStore:
-    """Async database storage for records and attachments."""
+    """Async SQLite storage for canonical records and file attachments."""
 
-    logger = logging.getLogger(__name__)
-
-    def __init__(self, database_url: str, uploads_path: Path | None = None) -> None:
-        self.logger.info(f"Initializing canonical data store...")
-
-        self._url = database_url
-        self._uploads_path = uploads_path
-        if self._url.startswith("sqlite"):
-            # Extract path from sqlite+aiosqlite:///path/to/db
-            path = self._url.split("///", 1)[-1]
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.logger.debug(f"Canonical data store URL: {self._url}")
-
-        self._initialized = False
-        self._engine = create_async_engine(database_url, echo=False)
-        self._session_factory = async_sessionmaker(
-            self._engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
+    def __init__(self, db_url: str, attachments_path: Path) -> None:
+        self._engine = create_async_engine(db_url, echo=False)
+        self._attachments = attachments_path
+        self._ready = False
+        self._sessions = async_sessionmaker(
+            self._engine, class_=AsyncSession, expire_on_commit=False
         )
 
     async def initialize(self) -> None:
-        """Create tables if they don't exist."""
-        if self._initialized:
+        """Create tables if needed. Idempotent."""
+        if self._ready:
             return
-
-        async with self._engine.begin() as connection:
-            self.logger.debug("Creating database tables...")
-            await connection.run_sync(Base.metadata.create_all)
-        self._initialized = True
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        self._ready = True
 
     async def close(self) -> None:
-        """Close database connection."""
-        self.logger.debug("Disposing database engine...")
+        """Dispose the database engine."""
         await self._engine.dispose()
 
-    async def _ensure_tables(self) -> None:
-        if not self._initialized:
-            await self.initialize()
+    # MARK: Record CRUD
 
     async def insert_record(
         self,
         content: str,
         doc_id: str | None = None,
-        content_type: str = "text",
+        content_type: ContentType = ContentType.TEXT,
         source: str | None = None,
-        metadata: str | None = None,
     ) -> str:
         """Insert a record, return its ID."""
-        await self._ensure_tables()
-        self.logger.debug("Inserting new record into CanonicalStore...")
-
+        await self._ensure_ready()
         rid = doc_id or str(uuid.uuid4())
-        async with self._session_factory() as session:
-            record = Record(
-                id=rid,
-                content=content,
-                content_type=content_type,
-                source=source,
-                metadata_json=metadata,
+        async with self._sessions() as s:
+            s.add(
+                Record(
+                    id=rid,
+                    content=content,
+                    content_type=content_type.value,
+                    source=source,
+                )
             )
-
-            session.add(record)
-            await session.commit()
-
+            await s.commit()
         return rid
 
     async def get_record(self, record_id: str) -> Record | None:
         """Get a record by ID."""
-        await self._ensure_tables()
-        self.logger.debug(f"Fetching record with ID: {record_id}")
-
-        async with self._session_factory() as session:
-            return await session.get(Record, record_id)
+        await self._ensure_ready()
+        async with self._sessions() as s:
+            return await s.get(Record, record_id)
 
     async def delete_record(self, record_id: str) -> bool:
-        """Delete a record by ID."""
-        await self._ensure_tables()
-        self.logger.debug(f"Deleting record with ID: {record_id}")
-
-        async with self._session_factory() as session:
-            record = await session.get(Record, record_id)
+        """Delete a record by ID. Returns whether it existed."""
+        await self._ensure_ready()
+        async with self._sessions() as s:
+            record = await s.get(Record, record_id)
             if record is None:
                 return False
-
-            await session.delete(record)
-            await session.commit()
+            await s.delete(record)
+            await s.commit()
             return True
 
     async def list_records(self, limit: int = 100, offset: int = 0) -> list[Record]:
-        """List records with pagination."""
-        await self._ensure_tables()
-        self.logger.debug(f"Listing records with limit={limit}, offset={offset}")
-
-        async with self._session_factory() as session:
+        """List records, newest first."""
+        await self._ensure_ready()
+        async with self._sessions() as s:
             stmt = (
                 select(Record)
                 .order_by(Record.created_at.desc())
                 .offset(offset)
                 .limit(limit)
             )
-
-            result = await session.execute(stmt)
-            return list(result.scalars().all())
+            return list((await s.execute(stmt)).scalars().all())
 
     async def count_records(self) -> int:
-        """Count total records."""
-        await self._ensure_tables()
-        self.logger.debug("Counting total records in CanonicalStore...")
-
-        async with self._session_factory() as session:
-            stmt = select(func.count()).select_from(Record)
-            result = await session.execute(stmt)
-            return result.scalar() or 0
+        """Total record count."""
+        await self._ensure_ready()
+        async with self._sessions() as s:
+            return (
+                await s.execute(select(func.count()).select_from(Record))
+            ).scalar() or 0
 
     async def search_records(self, query: str, limit: int = 10) -> list[Record]:
-        """Text search in content and source (includes filenames for uploads)."""
-        await self._ensure_tables()
-        self.logger.debug(f"Searching records with query: {query}, limit: {limit}")
-
-        async with self._session_factory() as session:
+        """Substring search in content and source."""
+        await self._ensure_ready()
+        async with self._sessions() as s:
             stmt = (
                 select(Record)
                 .where(
@@ -148,70 +113,9 @@ class CanonicalStore:
                 )
                 .limit(limit)
             )
-            result = await session.execute(stmt)
-            return list(result.scalars().all())
+            return list((await s.execute(stmt)).scalars().all())
 
-    def _save_upload(self, filename: str, data: bytes) -> Path:
-        """Save uploaded file to persistent storage, return path."""
-        if not self._uploads_path:
-            raise ValueError("uploads_path not configured")
-        self._uploads_path.mkdir(parents=True, exist_ok=True)
-
-        # Hash content for deduplication
-        content_hash = hashlib.sha256(data).hexdigest()[:16]
-        # Preserve extension for mime type detection
-        ext = Path(filename).suffix
-        safe_name = f"{content_hash}{ext}"
-        path = self._uploads_path / safe_name
-
-        # Only write if not already exists (deduplication)
-        if not path.exists():
-            path.write_bytes(data)
-            self.logger.debug(f"Saved upload: {path}")
-        else:
-            self.logger.debug(f"Upload already exists: {path}")
-
-        return path
-
-    async def _insert_attachment(
-        self,
-        record_id: str,
-        path: Path,
-    ) -> str:
-        """Insert an attachment record for a file."""
-        await self._ensure_tables()
-        self.logger.debug(f"Inserting attachment for record ID: {record_id}")
-
-        aid = str(uuid.uuid4())
-        async with self._session_factory() as session:
-            attachment = Attachment(
-                id=aid,
-                record_id=record_id,
-                file_name=path.name,
-                file_path=str(path),
-                mime_type=None,
-                size_bytes=path.stat().st_size if path.exists() else None,
-            )
-
-            session.add(attachment)
-            await session.commit()
-
-        return aid
-
-    def resolve_file(self, file_path: str, content: str | None = None) -> Path:
-        """Resolve a file reference to a local path.
-
-        Args:
-            file_path: Local path to file, OR filename when content is provided.
-            content: Base64-encoded file data. If provided, file_path is the filename.
-
-        Returns:
-            Resolved Path (saved to uploads/ if base64 content provided).
-        """
-        if content:
-            data = base64.b64decode(content)
-            return self._save_upload(file_path, data)
-        return Path(file_path).expanduser().resolve()
+    # MARK: File Handling
 
     async def insert_file(
         self,
@@ -219,36 +123,46 @@ class CanonicalStore:
         content: str | None = None,
         doc_id: str | None = None,
     ) -> tuple[str, Path]:
-        """Insert a file into canonical storage.
+        """Insert a file record, copying into attachments/ (content-deduped)."""
+        abs_path = self._save_attachment(file_path, content)
+        rel_path = str(abs_path.relative_to(self._attachments))
 
-        Args:
-            file_path: Local path to file, OR filename when content is provided.
-            content: Base64-encoded file data. If provided, file_path is the filename.
-            doc_id: Optional custom ID. Auto-generated if not provided.
-
-        Returns:
-            Tuple of (record_id, resolved_path).
-        """
-        path = self.resolve_file(file_path, content)
-        source = f"upload:{file_path}" if content else str(path)
-
-        # Create record and attachment
         rid = await self.insert_record(
-            content=str(path),
+            content=rel_path,
             doc_id=doc_id,
-            content_type="file_ref",
-            source=source,
+            content_type=ContentType.FILE,
+            source=file_path,
         )
-        await self._insert_attachment(rid, path)
+        return rid, abs_path
 
-        return rid, path
+    # MARK: Private
 
-    async def get_attachments(self, record_id: str) -> list[Attachment]:
-        """Get all attachments for a record."""
-        await self._ensure_tables()
-        self.logger.debug(f"Getting attachments for record ID: {record_id}")
+    async def _ensure_ready(self) -> None:
+        if not self._ready:
+            await self.initialize()
 
-        async with self._session_factory() as session:
-            stmt = select(Attachment).where(Attachment.record_id == record_id)
-            result = await session.execute(stmt)
-            return list(result.scalars().all())
+    def _save_attachment(self, file_path: str, content: str | None) -> Path:
+        """Decode or read file data, save content-deduped into attachments/.
+
+        If `content` is provided, it's a base64-encoded string of the file bytes.
+        Otherwise, `file_path` is treated as a path on disk to read the bytes
+        from (used for local file inserts).
+        """
+        if content:  # Base64-encoded file content
+            data, name = base64.b64decode(content), file_path
+
+        else:  # Local file path
+            src = Path(file_path)
+            if not src.is_absolute():
+                raise ValueError(f"Expected absolute path, got: {file_path}")
+            if not src.is_file():
+                raise FileNotFoundError(f"File not found: {file_path}")
+            data, name = src.read_bytes(), src.name
+
+        self._attachments.mkdir(parents=True, exist_ok=True)
+        content_hash = hashlib.sha256(data).hexdigest()[:16]
+        dest = self._attachments / f"{content_hash}-{Path(name).suffix}"
+
+        if not dest.exists():
+            dest.write_bytes(data)
+        return dest

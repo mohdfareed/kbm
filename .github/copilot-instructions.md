@@ -22,25 +22,6 @@ KBM solves context fragmentation across LLM tools. Instead of conversations bein
 | **Record**         | Individual unit of content (text or file) within a Memory.                                  |
 | **Engine**         | Swappable storage implementation (chat-history, rag-anything).                              |
 
-## Project Structure
-
-```
-src/kbm/              # Single package
-├── __init__.py       # Public exports
-├── config.py         # Settings, enums
-├── engine.py         # EngineProtocol, Operation enum
-├── server.py         # MCP server
-├── helpers.py        # Utilities (logging, errors)
-├── cli/              # CLI subpackage
-│   ├── __init__.py   # Typer app, global options
-│   ├── memory.py     # init, delete, list commands
-│   └── server.py     # start, status, path commands
-└── engines/          # Engine implementations
-    ├── __init__.py   # get_engine factory
-    ├── chat_history.py
-    └── rag_anything.py
-```
-
 ## CLI
 
 ```
@@ -90,22 +71,3 @@ Commands:
 | `scripts/run.sh`   | Run the CLI (`./scripts/run.sh <command>`) |
 | `scripts/setup.sh` | Lock & sync dependencies                   |
 | `scripts/check.sh` | Lint, type-check, test                     |
-
-## MCP Tools
-
-| Tool           | Description                   |
-| -------------- | ----------------------------- |
-| `query`        | Search the knowledge base     |
-| `insert`       | Add text content              |
-| `insert_file`  | Add a file (PDF, image, etc.) |
-| `delete`       | Remove a record by ID         |
-| `list_records` | List all records              |
-| `info`         | Get knowledge base metadata   |
-
-## Key Patterns
-
-**Settings:** `Settings.use(name_or_path)` sets memory path, then `Settings()` loads config.
-
-**Engine protocol:** `Operation` enum values match `EngineProtocol` method names. Validated at import.
-
-**Error handling:** Raise `KBMError` for expected user errors (shown without traceback). Any other exception is a bug (full traceback shown).

@@ -1,14 +1,11 @@
-"""Canonical data store - SQLite persistence for all records.
-
-Provides durable, portable storage that engines can rebuild their indexes from.
-Uses async SQLAlchemy 2.0 with aiosqlite for true async database operations.
-"""
+"""Canonical data store - SQLite persistence for all records."""
 
 __all__ = [
-    "Attachment",
+    "Base",
     "CanonicalStore",
+    "ContentType",
     "Record",
 ]
 
 from kbm.store.canonical import CanonicalStore
-from kbm.store.models import Attachment, Record
+from kbm.store.models import Base, ContentType, Record

@@ -5,7 +5,7 @@
       "command": "./scripts/run.sh",
       "args": [
         "start",
-        "kbm"
+        "-c",
       ]
     },
     "kbm-dev": {
@@ -13,7 +13,8 @@
       "command": "./scripts/run.sh",
       "args": [
         "start",
-        "kbm-dev"
+        "kbm-dev",
+        "-c",
       ]
     }
   },

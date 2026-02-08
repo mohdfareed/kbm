@@ -18,18 +18,11 @@ kbm init notes && kbm start notes
 
 ## Configuration
 
-```yaml
-# .kbm.yaml
-name: my-project
-engine: chat-history  # or rag-anything
-```
-
-* Environment variables (`KBM_*`) override config. Loaded from `.kbm.env`, `.env`, or shell.
-* Data lives at `$KBM_HOME/data/<name>/` (default: platform data dir).
-  * `kbm home` displays the data directory.
-  * Backup by copying this directory.
-`kbm init` creates a new memory with a default config with all possible options.
-`kbm status` shows the current configuration of a memory.
+* Environment variables (`KBM_*`) override config. Loaded from `.env`, or shell.
+* Data lives at `$KBM_HOME` (default: platform data dir).
+  * `kbm home` displays the current home directory.
+  * Backup/migrate by copying this directory.
+* `kbm status <name> --full` shows all config options with defaults.
 
 ## Features
 
@@ -51,15 +44,16 @@ engine: chat-history  # or rag-anything
 docker build -t kbm ./docker
 # Run (auto-creates memory if needed)
 docker run -v kbm-data:/data -p 8000:8000 kbm
+# If using Tailscale, use funnels to serve online
+tailscale funnel --bg --set-path=/memory 8000
 ```
 
 Example `docker-compose.yaml` provided in `./docker/`.
 
 ### Authentication (HTTP)
 
-When using HTTP transport, you can secure your server with GitHub OAuth. This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
-
-#### Setup
+When using HTTP transport, you can secure the MCP server with GitHub OAuth.
+This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
 
 1. **Create a GitHub OAuth App**:
    - Go to GitHub → Settings → Developer Settings → OAuth Apps → New OAuth App
@@ -69,7 +63,7 @@ When using HTTP transport, you can secure your server with GitHub OAuth. This us
 2. **Configure your memory**:
 
 ```yaml
-# .kbm.yaml
+# memory.yaml
 transport: http
 port: 8000
 
@@ -78,20 +72,7 @@ auth:
   client_id: "Ov23li..."
   client_secret: "abc123..."
   base_url: "http://localhost:8000"  # or public URL
-  allowed_emails: # empty = allow all
-    - alice@company.com
-    - bob@company.com
-  read_only_emails:
-    - intern@company.com  # can query but not insert/delete
 ```
-
-#### How it works
-
-1. Client connects to your MCP server over HTTP
-2. Server redirects to GitHub login (opens browser)
-3. User authorizes and GitHub returns a token
-4. Server validates the token and checks email against allowlist
-5. Read-only users can only use `query` and `info` tools
 
 ## Development
 

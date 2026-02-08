@@ -8,6 +8,14 @@ from . import MemoryNameArg, app, console
 from .helpers import print_summary
 
 
+def create_memory(name: str, engine: Engine = Engine.CHAT_HISTORY) -> MemoryConfig:
+    """Create a new memory config file and return the config."""
+    config_path = app_settings.memories_path / f"{name}.yaml"
+    config = MemoryConfig(file_path=config_path, name=name, engine=engine)
+    config_path.write_text(config.dump_yaml(full=False))
+    return config
+
+
 @app.command()
 def init(
     name: str = MemoryNameArg,
@@ -19,9 +27,6 @@ def init(
     if config_path.exists() and not force:
         raise FileExistsError(f"Memory already exists: {name}")
 
-    # Create config with defaults and save to file
-    config = MemoryConfig(file_path=config_path, name=name, engine=engine)
-    config_path.write_text(config.dump_yaml(full=False))
-
+    config = create_memory(name, engine)
     console.print(f"Initialized '{name}' with engine '{engine}'.")
     print_summary(config)

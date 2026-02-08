@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 def build_auth_provider(config: MemoryConfig) -> LibAuthProvider | None:
     """Build auth provider based on config."""
-    if config.transport != Transport.HTTP and config.auth != AuthProvider.NONE:
-        raise ValueError("Authentication is only supported for HTTP transport.")
     if config.transport != Transport.HTTP:
-        return None  # No auth for non-HTTP transports
+        if config.auth != AuthProvider.NONE:
+            raise ValueError("Authentication is only supported for HTTP transport.")
+        return None  # non-HTTP transport with no auth
 
     match config.auth:
         case AuthProvider.NONE:
@@ -24,6 +24,8 @@ def build_auth_provider(config: MemoryConfig) -> LibAuthProvider | None:
             return None
         case AuthProvider.GITHUB:
             return build_github_auth_provider(config)
+        case _:
+            raise NotImplementedError(f"Unsupported auth provider: {config.auth}")
 
 
 def build_github_auth_provider(config: MemoryConfig) -> GitHubProvider:

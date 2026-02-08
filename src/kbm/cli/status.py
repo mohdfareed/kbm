@@ -1,5 +1,7 @@
 """Status command."""
 
+import sys
+
 import typer
 
 from kbm.config import MemoryConfig
@@ -14,12 +16,18 @@ def status(
     full: bool = typer.Option(
         False, "-f", "--full", help="Show all options with defaults."
     ),
+    path: bool = typer.Option(False, "-p", "--path", help="Show config file path."),
 ) -> None:
     """Show memory configuration."""
     cfg = MemoryConfig.from_name(name)
+
+    if path:
+        console.print(cfg.file_path)
+        sys.exit(0)
+
     print_summary(cfg)
+    console.print("\n[dim]Configuration:[/dim]")
 
     # Print config options with or without defaults
-    console.print("\n[dim]Configuration:[/dim]")
     for key, value in cfg.dump(full=full).items():
         console.print(f"{key}={value}")
