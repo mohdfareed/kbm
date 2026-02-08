@@ -5,7 +5,7 @@ import typer
 from kbm.config import Engine, MemoryConfig, Transport
 from kbm.server import run_server
 
-from . import MemoryNameArg, app
+from . import MemoryNameArg, app, console
 from .helpers import print_status, setup_file_logging
 
 
@@ -18,9 +18,6 @@ def start(
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
     port: int | None = typer.Option(None, "-p", "--port"),
-    create: bool = typer.Option(
-        False, "-c", "--create", help="Create memory if it doesn't exist"
-    ),
 ) -> None:
     """Start the MCP server."""
     overrides = {}
@@ -30,11 +27,10 @@ def start(
     try:  # Load config
         cfg = MemoryConfig.from_name(name, **overrides)
     except FileNotFoundError:
-        if not create:
-            raise  # No config found
         from .init import create_memory
 
         # Create new config with defaults
+        console.print(f"[yellow]Memory '{name}' not found. Creating new memory...[/]")
         cfg = create_memory(name, engine or Engine.CHAT_HISTORY)
 
     # Handle CLI overrides

@@ -34,7 +34,7 @@ def setup_logging() -> None:
         markup=True,
         keywords=[],  # Highlight keywords
     )
-    handler.setFormatter(logging.Formatter("[dim]%(name)s:[/dim] %(message)s"))
+    handler.setFormatter(logging.Formatter("[dim]%(name)s:[/] %(message)s"))
 
     logging.root.setLevel(level)
     logging.root.addHandler(handler)
@@ -90,13 +90,13 @@ def format_config(data: dict) -> list[str]:
     # Top-level scalars
     if scalars:
         w = max(len(k) for k, _ in scalars)
-        lines += [f"[dim]{k:<{w}}[/dim]  {v}" for k, v in scalars]
+        lines += [f"[dim]{k:<{w}}[/]  {v}" for k, v in scalars]
 
     # Nested sections
     for section, items in sections:
-        lines.append(f"[dim]{section}:[/dim]")
+        lines.append(f"[dim]{section}:[/]")
         w = max(len(k) for k, _ in items)
-        lines += [f"  [dim]{k:<{w}}[/dim]  {v}" for k, v in items]
+        lines += [f"  [dim]{k:<{w}}[/]  {v}" for k, v in items]
 
     return lines
 
@@ -106,10 +106,10 @@ def print_status(cfg: MemoryConfig) -> None:
     from . import console
 
     console.print(
-        f"{_status_icon(cfg)} [bold]{cfg.name}[/bold]"
-        f" • [dim]{cfg.file_path.name}[/dim]"
-        f" • [dim]{cfg.engine.value}[/dim]"
-        f" • [dim]{_transport_label(cfg)}[/dim]"
+        f"{_status_icon(cfg)} [bold]{cfg.name}[/]"
+        f" • [dim]{cfg.file_path.name}[/]"
+        f" • [dim]{cfg.engine.value}[/]"
+        f" • [dim]{_transport_label(cfg)}[/]"
     )
 
 
@@ -117,18 +117,14 @@ def print_invalid(config_file: Path, error: Exception) -> None:
     """Print one-line status for an invalid/unreadable config."""
     from . import console
 
-    console.print(
-        f"[red]●[/red] [dim]{config_file.name}[/dim] • [dim]invalid: {error}[/dim]"
-    )
+    console.print(f"[red]●[/] [dim]{config_file.name}[/] • [dim]invalid: {error}[/]")
 
 
 def print_orphaned(data_dir: Path) -> None:
     """Print one-line status for an orphaned data directory."""
     from . import console
 
-    console.print(
-        f"[yellow]●[/yellow] [bold]{data_dir.name}[/bold] • [dim]orphaned[/dim]"
-    )
+    console.print(f"[yellow]●[/] [bold]{data_dir.name}[/] • [dim]orphaned[/]")
 
 
 def print_summary(cfg: MemoryConfig) -> None:
@@ -136,12 +132,12 @@ def print_summary(cfg: MemoryConfig) -> None:
     from . import console
 
     title = (
-        f"{_status_icon(cfg)} [bold]{cfg.name}[/bold]"
-        f" • [dim]{cfg.engine.value}[/dim]"
-        f" • [dim]{_transport_label(cfg)}[/dim]"
+        f"{_status_icon(cfg)} [bold]{cfg.name}[/]"
+        f" • [dim]{cfg.engine.value}[/]"
+        f" • [dim]{_transport_label(cfg)}[/]"
     )
-    header = f"[bold]Config:[/bold] {cfg.file_path}"
-    header += f"\n[bold]Data:[/bold]   {cfg.data_path}"
+    header = f"[bold]Config:[/] {cfg.file_path}"
+    header += f"\n[bold]Data:[/]   {cfg.data_path}"
 
     console.print(
         Panel(
@@ -165,4 +161,4 @@ def _transport_label(cfg: MemoryConfig) -> str:
 
 
 def _status_icon(cfg: MemoryConfig) -> str:
-    return "[green]●[/green]" if cfg.data_path.exists() else "[yellow]●[/yellow]"
+    return "[green]●[/]" if cfg.data_path.exists() else "[yellow]●[/]"

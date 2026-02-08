@@ -34,6 +34,4 @@ def list_memories() -> None:
 
     # No memories or data found
     if not found_any:
-        console.print(
-            "[dim]No memories found. Use [bold]kbm init[/bold] to create one.[/dim]"
-        )
+        console.print("[dim]No memories found. Use [bold]kbm init[/] to create one.[/]")

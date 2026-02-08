@@ -51,18 +51,18 @@ def _print_pretty(view: ServerView) -> None:
     ]  # non-empty capabilities
 
     # Header from MCP initialize handshake
-    header = f"[dim]FastMCP:[/dim] [dim]v{info.version}[/dim]"
-    header += f"\n[dim]Protocol:[/dim] {view.init.protocolVersion}"
+    header = f"[dim]FastMCP:[/] [dim]v{info.version}[/]"
+    header += f"\n[dim]Protocol:[/] {view.init.protocolVersion}"
     if enabled:
-        header += f"\n[dim]Capabilities:[/dim] {', '.join(enabled)}"
+        header += f"\n[dim]Capabilities:[/] {', '.join(enabled)}"
 
     # Instructions from the MCP initialize handshake
     if view.init.instructions:
-        header += "\n[dim]Instructions:[/dim]\n" + view.init.instructions
+        header += "\n[dim]Instructions:[/]\n" + view.init.instructions
     console.print(
         Panel(
             header,
-            title=f"[bold]{info.name}[/bold]",
+            title=f"[bold]{info.name}[/]",
             title_align="left",
             border_style="",
         )
@@ -71,16 +71,16 @@ def _print_pretty(view: ServerView) -> None:
     # Tools supported by the server
 
     if not view.tools:
-        console.print("[dim]No tools registered.[/dim]")
+        console.print("[dim]No tools registered.[/]")
         return
 
-    console.print(f"[dim]Tools ({len(view.tools)}):[/dim]")
+    console.print(f"[dim]Tools ({len(view.tools)}):[/]")
     for tool in view.tools:
         _render_tool(tool)
 
 
 def _render_tool(tool: Tool) -> None:
-    parts: list[object] = [tool.description or "[dim]No description[/dim]"]
+    parts: list[object] = [tool.description or "[dim]No description[/]"]
 
     # Input schema → param table
     props: dict = (tool.inputSchema or {}).get("properties", {})
@@ -104,12 +104,12 @@ def _render_tool(tool: Tool) -> None:
     if tool.annotations:
         ann = tool.annotations.model_dump(exclude_none=True)
         if ann:
-            parts += ["  ".join(f"[dim]{k}[/dim]={v}" for k, v in ann.items())]
+            parts += ["  ".join(f"[dim]{k}[/]={v}" for k, v in ann.items())]
 
     console.print(
         Panel.fit(
             _group(parts),
-            title=f"[bold]{tool.name}[/bold]",
+            title=f"[bold]{tool.name}[/]",
             title_align="left",
             border_style="blue",
         )
