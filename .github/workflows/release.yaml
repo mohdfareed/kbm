@@ -46,11 +46,20 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Bumped to $VERSION"
 
+      - name: Update coverage badge
+        run: |
+          COV=$(uv run pytest -q --cov=kbm --cov-report=term-missing | tail -1 | awk '{print $NF}' | tr -d '%')
+          if (( COV >= 90 )); then COLOR="brightgreen"
+          elif (( COV >= 75 )); then COLOR="green"
+          elif (( COV >= 60 )); then COLOR="yellow"
+          else COLOR="red"; fi
+          sed -i "s|https://img.shields.io/badge/coverage-.*)|https://img.shields.io/badge/coverage-${COV}%25-${COLOR})|" README.md
+
       - name: Commit & tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml uv.lock
+          git add pyproject.toml uv.lock README.md
           git commit -m "release: v${{ steps.bump.outputs.version }}"
           git tag "v${{ steps.bump.outputs.version }}"
           git push origin HEAD:main --tags
