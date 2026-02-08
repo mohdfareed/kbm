@@ -31,6 +31,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-python: true
       - uses: actions/cache@v5
         with:
           path: .venv
@@ -41,7 +42,7 @@ jobs:
         id: bump
         run: |
           uv version --bump ${{ inputs.bump }}
-          VERSION=$(uv version)
+          VERSION=$(uv version | awk '{print $2}')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Bumped to $VERSION"
 
