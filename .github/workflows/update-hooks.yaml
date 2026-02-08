@@ -1,4 +1,4 @@
-name: Update Pre-commit Hooks
+name: Pre-commit Hooks
 
 on:
   schedule:
@@ -26,8 +26,8 @@ jobs:
       - name: Create PR if changed
         uses: peter-evans/create-pull-request@v8
         with:
-          commit-message: "Hooks: Update pre-commit hooks"
-          title: "Hooks: Update pre-commit hooks"
+          commit-message: "ci: update pre-commit hooks"
+          title: "CI: Update pre-commit hooks"
           branch: auto/pre-commit-update
           delete-branch: true
           body: |
