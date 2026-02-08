@@ -24,7 +24,7 @@ jobs:
         run: uv run pre-commit autoupdate
 
       - name: Create PR if changed
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "Hooks: Update pre-commit hooks"
           title: "Hooks: Update pre-commit hooks"
