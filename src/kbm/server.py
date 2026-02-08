@@ -27,6 +27,7 @@ def build_server(config: MemoryConfig) -> FastMCP:
         try:
             yield
         finally:
+            print()  # Newline after shutdown message
             logger.info("Closing canonical store...")
             await store.close()
 

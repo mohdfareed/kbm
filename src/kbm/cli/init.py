@@ -28,5 +28,5 @@ def init(
         raise FileExistsError(f"Memory already exists: {name}")
 
     config = create_memory(name, engine)
-    console.print(f"Initialized '{name}' with engine '{engine}'.")
+    console.print(f"Initialized '{name}' with engine '{engine.value}'.")
     print_summary(config)

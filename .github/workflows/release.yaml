@@ -117,12 +117,7 @@ jobs:
             echo '```bash'
             echo "# Install from GitHub (requires git)"
             echo "pip install git+https://github.com/${{ github.repository }}.git@v${{ needs.versioning.outputs.version }}"
-            echo ""
-            echo "# Or with pipx"
-            echo "pipx install git+https://github.com/${{ github.repository }}.git@v${{ needs.versioning.outputs.version }}"
             echo '```'
-            echo ""
-            echo "## CLI Reference"
             echo ""
             cat docs/cli.md
             echo "EOF"

@@ -1,10 +1,20 @@
-FROM python:3.14-slim
-RUN pip install uv
+# --- Build stage ---
+FROM python:3.14-slim AS builder
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Install in system python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY . .
 RUN uv pip install --system .
+
+# --- Runtime stage ---
+FROM python:3.14-slim
+
+# Copy environment
+COPY --from=builder /usr/local /usr/local
 
 # Runtime config
 ENV KBM_HOME=/data
