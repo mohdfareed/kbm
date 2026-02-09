@@ -18,15 +18,14 @@ pipx install git+https://github.com/mohdfareed/kbm
 ## Quick Start
 
 ```sh
-kbm init && kbm start # defaults to cwd name
-kbm init notes && kbm start notes
+kbm start # defaults to cwd name
+kbm start notes
 ```
 
 ## Configuration
 
 * Environment variables (`KBM_*`) override config. Loaded from `.env`, `.kbm.env`, or shell.
 * Data lives at `$KBM_HOME` (default: platform data dir).
-  * `kbm home` displays the current home directory.
   * Backup/migrate by copying this directory.
 * `kbm status <name> --full` shows all config options with defaults.
 
@@ -34,7 +33,7 @@ kbm init notes && kbm start notes
 
 **Engines** provide different retrieval strategies:
 
-- `chat-history` - Simple JSON storage for conversations
+- `chat-history` - SQLite database with FTS5 search
 - `rag-anything` - Multi-modal RAG with LightRAG
 
 **Canonical Storage** wraps all writable engines with a SQLite-backed persistence layer:
@@ -61,35 +60,18 @@ Example `docker-compose.yaml` provided in `./docker/`.
 When using HTTP transport, you can secure the MCP server with GitHub OAuth.
 This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
 
-1. **Create a GitHub OAuth App**:
+**Create a GitHub OAuth App**:
    - Go to GitHub → Settings → Developer Settings → OAuth Apps → New OAuth App
    - Set "Authorization callback URL" to `http://your-server:8000/oauth/callback`
-   - Note your Client ID and Client Secret
-
-2. **Configure your memory**:
-
-```yaml
-# memory.yaml
-transport: http
-port: 8000
-
-auth:
-  provider: github
-  client_id: "Ov23li..."
-  client_secret: "abc123..."
-  base_url: "http://localhost:8000"  # or public URL
-```
+   - Add the Client ID and Client Secret to the memory configuration
 
 ## Development
 
 ```sh
 git clone https://github.com/mohdfareed/kbm && cd kbm
-./scripts/setup.sh       # install deps
-./scripts/run.sh --help  # run CLI
-./scripts/test.sh        # lint, typecheck, test
+./scripts/run.sh -h  # run CLI
+./scripts/test.sh    # must be used before committing
 ```
-
-For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` flag.
 
 ## TODO
 
@@ -118,5 +100,5 @@ For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` fla
   - Sampling only covers text generation; embeddings still need a provider (GitHub, OpenAI, etc.).
   - Fallback to configured provider for clients that don't support sampling.
 - [ ] **Documentation**: Add examples and templates to `docs/`.
-  - Add config files examples of authentication, GitHub LLM provider, etc.
+  - Add config file examples with authentication, GitHub-provided LLMs, etc.
   - Add example docker compose files.

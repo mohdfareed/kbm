@@ -22,35 +22,6 @@ KBM solves context fragmentation across LLM tools. Instead of conversations bein
 | **Record**         | Individual unit of content (text or file) within a Memory.                                  |
 | **Engine**         | Swappable storage implementation (chat-history, rag-anything).                              |
 
-## CLI
-
-```
-kbm [-m <memory>] [-d] [-v] [-h] <command>
-
-Options:
-  -m, --memory   Memory name or path (like git -C)
-  -d, --debug    Enable debug logging
-  -v, --version  Show version
-  -h, --help     Show help
-
-Commands:
-  init [name]    Create memory (local .kbm/ or global)
-  delete <name>  Delete a global memory
-  list           List all memories
-  start          Start MCP server
-  status         Show memory configuration
-  path           Print resolved memory path
-```
-
-## Memory Layout
-
-```
-.kbm/                 # or ~/.../kbm/memories/<name>/
-├── config.yaml       # Settings (engine, transport, etc.)
-└── data/             # Engine-managed data
-    └── <engine>/     # e.g., chat-history/, rag-anything/
-```
-
 ## Technology Stack
 
 | Component     | Choice            | Rationale                            |
@@ -69,5 +40,4 @@ Commands:
 | Script             | Purpose                                    |
 | ------------------ | ------------------------------------------ |
 | `scripts/run.sh`   | Run the CLI (`./scripts/run.sh <command>`) |
-| `scripts/setup.sh` | Lock & sync dependencies                   |
 | `scripts/test.sh`  | Lint, type-check, test                     |

@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 echo "==> Updating dependencies..."
 uv lock --upgrade
 uv sync --dev
+uv run pre-commit install
 
 echo
 echo "==> Formatting..."
