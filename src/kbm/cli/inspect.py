@@ -7,6 +7,7 @@ from fastmcp import Client
 from mcp.types import InitializeResult, Tool
 from rich.console import Group, RenderableType
 from rich.panel import Panel
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
@@ -51,35 +52,46 @@ def _print_pretty(view: ServerView) -> None:
     ]  # non-empty capabilities
 
     # Header from MCP initialize handshake
+
     header = f"[dim]FastMCP:[/] [dim]v{info.version}[/]"
     header += f"\n[dim]Protocol:[/] {view.init.protocolVersion}"
     if enabled:
         header += f"\n[dim]Capabilities:[/] {', '.join(enabled)}"
 
-    # Instructions from the MCP initialize handshake
-    if view.init.instructions:
-        header += "\n[dim]Instructions:[/]\n" + view.init.instructions
     console.print(
         Panel(
             header,
             title=f"[bold]{info.name}[/]",
             title_align="left",
+            border_style="dim",
+        )
+    )
+
+    # Interface panel containing instructions and tools
+
+    interface_parts: list[RenderableType] = []
+
+    if view.init.instructions:
+        interface_parts.append(Panel(view.init.instructions, border_style="dim"))
+    if not view.tools:
+        interface_parts.append(Text("[dim]No tools registered.[/]"))
+    else:
+        interface_parts.append(Rule(f"Tools ({len(view.tools)})", style="bold"))
+
+        for tool in view.tools:
+            interface_parts.append(_render_tool_panel(tool))
+
+    console.print(
+        Panel(
+            Group(*interface_parts),
+            title=f"[bold]Instructions[/]",
+            title_align="left",
             border_style="",
         )
     )
 
-    # Tools supported by the server
 
-    if not view.tools:
-        console.print("[dim]No tools registered.[/]")
-        return
-
-    console.print(f"[dim]Tools ({len(view.tools)}):[/]")
-    for tool in view.tools:
-        _render_tool(tool)
-
-
-def _render_tool(tool: Tool) -> None:
+def _render_tool_panel(tool: Tool) -> Panel:
     parts: list[object] = [tool.description or "[dim]No description[/]"]
 
     # Input schema → param table
@@ -106,13 +118,11 @@ def _render_tool(tool: Tool) -> None:
         if ann:
             parts += ["  ".join(f"[dim]{k}[/]={v}" for k, v in ann.items())]
 
-    console.print(
-        Panel.fit(
-            _group(parts),
-            title=f"[bold]{tool.name}[/]",
-            title_align="left",
-            border_style="blue",
-        )
+    return Panel.fit(
+        _group(parts),
+        title=f"[bold]{tool.name}[/]",
+        title_align="left",
+        border_style="blue",
     )
 
 
