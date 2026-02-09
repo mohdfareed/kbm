@@ -163,7 +163,7 @@ class CanonStore:
 
         self._attachments.mkdir(parents=True, exist_ok=True)
         content_hash = hashlib.sha256(data).hexdigest()[:16]
-        dest = self._attachments / f"{content_hash}-{Path(name).suffix}"
+        dest = self._attachments / f"{content_hash}-{name}"
 
         if not dest.exists():
             dest.write_bytes(data)
