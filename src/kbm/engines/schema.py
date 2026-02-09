@@ -75,10 +75,6 @@ Content = Annotated[
     str,
     Field(description="Text content to store."),
 ]
-DocId = Annotated[
-    str | None,
-    Field(description="Optional custom ID. Auto-generated if not provided."),
-]
 FilePath = Annotated[
     str,
     Field(description="Local path to file, OR filename when content is provided."),

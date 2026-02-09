@@ -85,22 +85,17 @@ class EngineBase(ABC):
         return await self._call_hook(self._query, query, top_k)
 
     @tool(description=schema.INSERT_DESCRIPTION, annotations=schema.INSERT_ANNOTATIONS)
-    async def insert(
-        self, content: schema.Content, doc_id: schema.DocId = None
-    ) -> schema.InsertResponse:
-        return await self._call_hook(self._insert, content, doc_id)
+    async def insert(self, content: schema.Content) -> schema.InsertResponse:
+        return await self._call_hook(self._insert, content)
 
     @tool(
         description=schema.INSERT_FILE_DESCRIPTION,
         annotations=schema.INSERT_FILE_ANNOTATIONS,
     )
     async def insert_file(
-        self,
-        file_path: schema.FilePath,
-        content: schema.FileContent = None,
-        doc_id: schema.DocId = None,
+        self, file_path: schema.FilePath, content: schema.FileContent = None
     ) -> schema.InsertResponse:
-        return await self._call_hook(self._insert_file, file_path, content, doc_id)
+        return await self._call_hook(self._insert_file, file_path, content)
 
     @tool(description=schema.DELETE_DESCRIPTION, annotations=schema.DELETE_ANNOTATIONS)
     async def delete(self, record_id: schema.RecordId) -> schema.DeleteResponse:

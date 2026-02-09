@@ -36,11 +36,6 @@ class TestInsert:
         assert result.id
         assert result.message == "Inserted"
 
-    async def test_insert_with_custom_id(self, engine: EngineBase) -> None:
-        """Insert with custom doc_id uses that ID."""
-        result = await engine.insert("test content", doc_id="custom-id")
-        assert result.id == "custom-id"
-
     async def test_insert_file(self, engine: EngineBase, tmp_path: Path) -> None:
         """Insert file stores reference in canonical."""
         test_file = tmp_path / "test.txt"
@@ -84,8 +79,8 @@ class TestDelete:
 
     async def test_delete_existing(self, engine: EngineBase) -> None:
         """Delete removes existing record."""
-        await engine.insert("test", doc_id="to-delete")
-        delete_result = await engine.delete("to-delete")
+        insert_result = await engine.insert("test")
+        delete_result = await engine.delete(insert_result.id)
         assert delete_result.found is True
 
         # Should not find it anymore
