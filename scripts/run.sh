@@ -9,4 +9,4 @@ if [[ "$1" == "--rebuild" || "$1" == "-r" ]]; then
     uv sync --quiet
 fi
 
-exec uv run --quiet --env-file .env kbm "$@"
+exec uv run --quiet kbm "$@"

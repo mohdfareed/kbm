@@ -139,13 +139,6 @@ class TestList:
         assert "alpha" in result.stdout
         assert "beta" in result.stdout
 
-    def test_shows_orphaned_data(self, tmp_home: Path) -> None:
-        """Orphaned data directories are surfaced."""
-        (tmp_home / "data" / "orphaned").mkdir(parents=True)
-
-        result = invoke("list", home=tmp_home)
-        assert "orphaned" in result.stdout
-
 
 # -- Start --------------------------------------------------------------------
 
@@ -169,7 +162,7 @@ class TestStart:
         init_memory("srv", home=tmp_home)
         result = invoke("start", "srv", home=tmp_home)
         assert result.exit_code == 0
-        assert capture_server["config"].name == "srv"
+        assert capture_server["config"].settings.name == "srv"
 
     def test_transport_override(self, tmp_home: Path, capture_server: dict) -> None:
         """--transport overrides config value."""
@@ -188,11 +181,6 @@ class TestStart:
         assert capture_server["config"].host == "192.168.1.1"
         assert capture_server["config"].port == 9000
 
-    def test_nonexistent_fails(self, tmp_home: Path, capture_server: dict) -> None:
-        """Starting nonexistent memory fails."""
-        result = invoke("start", "ghost", home=tmp_home)
-        assert result.exit_code != 0
-
     def test_engine_override(self, tmp_home: Path, capture_server: dict) -> None:
         """--engine overrides config value."""
         init_memory("srv", home=tmp_home)
@@ -203,21 +191,14 @@ class TestStart:
     def test_create_initializes_memory(
         self, tmp_home: Path, capture_server: dict
     ) -> None:
-        """--create initializes a new memory if it doesn't exist."""
-        result = invoke("start", "new-mem", "--create", home=tmp_home)
+        """start initializes a new memory if it doesn't exist."""
+        result = invoke("start", "new-mem", home=tmp_home)
         assert result.exit_code == 0
-        assert capture_server["config"].name == "new-mem"
+        assert capture_server["config"].settings.name == "new-mem"
 
         # Memory should now be listed
         result = invoke("list", home=tmp_home)
         assert "new-mem" in result.stdout
-
-    def test_create_not_needed(self, tmp_home: Path, capture_server: dict) -> None:
-        """--create is a no-op when memory already exists."""
-        init_memory("existing", home=tmp_home)
-        result = invoke("start", "existing", "--create", home=tmp_home)
-        assert result.exit_code == 0
-        assert capture_server["config"].name == "existing"
 
 
 # -- Status -------------------------------------------------------------------

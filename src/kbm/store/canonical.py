@@ -1,5 +1,6 @@
 """Canonical data store - SQLite source of truth for all records."""
 
+import asyncio
 import base64
 import hashlib
 import uuid
@@ -22,17 +23,24 @@ class CanonStore:
         self._engine = create_async_engine(db_url, echo=False)
         self._attachments = attachments_path
         self._ready = False
+        self._init_lock = asyncio.Lock()
         self._sessions = async_sessionmaker(
             self._engine, class_=AsyncSession, expire_on_commit=False
         )
 
     async def initialize(self) -> None:
-        """Create tables if needed. Idempotent."""
+        """Create tables if needed. Idempotent and concurrency-safe."""
         if self._ready:
             return
-        async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        self._ready = True
+
+        async with self._init_lock:
+            if self._ready:
+                return  # double-checked locking
+
+            # Create tables if they don't exist
+            async with self._engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            self._ready = True
 
     async def close(self) -> None:
         """Dispose the database engine."""

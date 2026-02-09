@@ -3,5 +3,5 @@ set -e
 
 cd "$(dirname "$0")/.."
 mkdir -p docs
-uv run typer kbm utils docs --name kbm > docs/cli.md
+uv run typer kbm utils docs > docs/cli.md
 echo "CLI docs written to docs/cli.md"

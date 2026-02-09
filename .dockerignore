@@ -2,6 +2,7 @@
 .git
 .github
 .gitignore
+.pre-commit-config.yaml
 
 # Python
 .venv
@@ -21,7 +22,7 @@ __pycache__
 .kbm
 .kbm.*
 .env
-design/
+docs/
 scripts/
 tests/
 

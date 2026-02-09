@@ -15,8 +15,8 @@ class ChatHistoryEngine(EngineBase):
     logger = logging.getLogger(__name__)
     supported_operations = frozenset(Operation)  # all operations
 
-    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
-        super().__init__(config, store)
+    def __init__(self, memory: MemoryConfig, store: CanonStore) -> None:
+        super().__init__(memory, store)
 
     async def _info(self) -> schema.InfoResponse:
         count = await self._store.count_records()

@@ -54,9 +54,9 @@ class EngineBase(ABC):
 
     # MARK: Initialization
 
-    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
-        self.logger.info(f"Initializing {config.engine} engine...")
-        self._config = config
+    def __init__(self, memory: MemoryConfig, store: CanonStore) -> None:
+        self.logger.info(f"Initializing {memory.engine} engine...")
+        self._memory = memory
         self._store = store
 
     def __init_subclass__(cls, **kwargs: object) -> None:
@@ -176,7 +176,5 @@ class EngineBase(ABC):
         except ToolError:
             raise
         except Exception as e:
-            self.logger.error(
-                f"Unexpected error in {hook.__name__}: {e}", exc_info=True
-            )
+            self.logger.error(f"Unexpected error in {hook.__name__}: {e}")
             raise ToolError(str(e)) from e

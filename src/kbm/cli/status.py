@@ -19,12 +19,12 @@ def status(
     path: bool = typer.Option(False, "-p", "--path", help="Show config file path."),
 ) -> None:
     """Show memory configuration."""
-    cfg = MemoryConfig.from_name(name)
+    memory = MemoryConfig.from_name(name)
 
     if path:
-        console.print(cfg.file_path)
+        console.print(memory.settings.config_file)
         sys.exit(0)
 
-    print_summary(cfg)
-    for line in format_config(cfg.dump(full=full)):
+    print_summary(memory)
+    for line in format_config(memory.dump(full=full)):
         console.print(f"  {line}")

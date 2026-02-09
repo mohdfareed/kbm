@@ -61,11 +61,11 @@ class RAGAnythingEngine(EngineBase):
         }
     )
 
-    def __init__(self, config: "MemoryConfig", store: CanonStore) -> None:
-        super().__init__(config, store)
+    def __init__(self, memory: MemoryConfig, store: CanonStore) -> None:
+        super().__init__(memory, store)
 
-        self.config = config.rag_anything
-        self.working_dir = config.engine_data_path
+        self.config = memory.rag_anything
+        self.working_dir = memory.settings.data_path / "rag_anything"
         self.working_dir.mkdir(parents=True, exist_ok=True)
 
         self._api_key = self.config.api_key

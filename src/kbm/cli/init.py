@@ -2,18 +2,24 @@
 
 import typer
 
-from kbm.config import Engine, MemoryConfig, app_settings
+from kbm.config import Engine, MemoryConfig, MemorySettings, app_settings
 
 from . import MemoryNameArg, app, console
 from .helpers import print_summary
 
 
-def create_memory(name: str, engine: Engine = Engine.CHAT_HISTORY) -> MemoryConfig:
+def create_memory(settings: MemorySettings, **kwargs) -> MemoryConfig:
     """Create a new memory config file and return the config."""
-    config_path = app_settings.memories_path / f"{name}.yaml"
-    config = MemoryConfig(file_path=config_path, name=name, engine=engine)
-    config_path.write_text(config.dump_yaml(full=False))
-    return config
+    if app_settings.template_path.exists():
+        memory = MemoryConfig._from_file(
+            app_settings.template_path, settings=settings, **kwargs
+        )
+    else:  # Create default memory config
+        memory = MemoryConfig(settings=settings, **kwargs)
+
+    memory.settings.ensure_dirs()
+    memory.settings.config_file.write_text(memory.dump_yaml(full=False))
+    return memory
 
 
 @app.command()
@@ -23,10 +29,10 @@ def init(
     force: bool = typer.Option(False, "-f", "--force", help="Overwrite if exists."),
 ) -> None:
     """Create a new memory."""
-    config_path = app_settings.memories_path / f"{name}.yaml"
-    if config_path.exists() and not force:
+    settings = MemorySettings(name=name)
+    if settings.root.exists() and not force:
         raise FileExistsError(f"Memory already exists: {name}")
 
-    config = create_memory(name, engine)
+    memory = create_memory(settings, engine=engine)
     console.print(f"Initialized '{name}' with engine '{engine.value}'.")
-    print_summary(config)
+    print_summary(memory)

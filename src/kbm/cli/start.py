@@ -3,6 +3,7 @@
 import typer
 
 from kbm.config import Engine, MemoryConfig, Transport
+from kbm.config.settings import MemorySettings
 from kbm.server import run_server
 
 from . import MemoryNameArg, app, console
@@ -25,23 +26,23 @@ def start(
         overrides["engine"] = engine
 
     try:  # Load config
-        cfg = MemoryConfig.from_name(name, **overrides)
+        memory = MemoryConfig.from_name(name, **overrides)
     except FileNotFoundError:
         from .init import create_memory
 
         # Create new config with defaults
         console.print(f"[yellow]Memory '{name}' not found. Creating new memory...[/]")
-        cfg = create_memory(name, engine or Engine.CHAT_HISTORY)
+        memory = create_memory(MemorySettings(name=name), **overrides)
 
     # Handle CLI overrides
     if transport:
-        cfg.transport = transport
+        memory.transport = transport
     if host:
-        cfg.host = host
+        memory.host = host
     if port:
-        cfg.port = port
+        memory.port = port
 
     # Start server with file logging
-    print_status(cfg)
-    setup_file_logging(cfg.log_file)
-    run_server(cfg)
+    print_status(memory)
+    setup_file_logging(memory.settings.log_file)
+    run_server(memory)

@@ -3,7 +3,7 @@
 from kbm.config import MemoryConfig, app_settings
 
 from . import app, console
-from .helpers import print_invalid, print_orphaned, print_status
+from .helpers import print_invalid, print_status
 
 
 @app.command(name="list")
@@ -13,24 +13,18 @@ def list_memories() -> None:
     found_any = False
 
     # All memories
-    for path in app_settings.memories:
+    for path in sorted(app_settings.memories_path.iterdir()):
         found_any = True
 
         try:  # Load config from file
-            cfg = MemoryConfig.from_file(path)
-            data_dirs.append(str(cfg.data_path.absolute()))
-            print_status(cfg)
+            memory = MemoryConfig.from_name(path.name)
+            data_dirs.append(str(memory.settings.root.absolute()))
+            print_status(memory)
 
         # Handle invalid config files
         except Exception as e:
-            print_invalid(path, e)
+            print_invalid(path.name, e)
             data_dirs.append(None)
-
-    # Orphaned data directories
-    for path in app_settings.data:
-        if str(path.absolute()) not in data_dirs:
-            found_any = True
-            print_orphaned(path)
 
     # No memories or data found
     if not found_any:

@@ -4,18 +4,22 @@
       "type": "stdio",
       "command": "./scripts/run.sh",
       "args": [
-        "start",
-        "-c",
-      ]
+        "start"
+      ],
     },
     "kbm-dev": {
       "type": "stdio",
       "command": "./scripts/run.sh",
       "args": [
         "start",
-        "kbm-dev",
-        "-c",
-      ]
+        "kbm-dev"
+      ],
+      "dev": {
+        "watch": "src/**/*.py",
+        "debug": {
+          "type": "debugpy"
+        }
+      },
     }
   },
   "inputs": []

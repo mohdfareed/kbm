@@ -23,4 +23,8 @@ echo "==> Running tests..."
 uv run pytest -q --cov=kbm --cov-report=term-missing
 
 echo
+echo "==> Checking docs generation..."
+./scripts/docs.sh
+
+echo
 echo "==> All checks passed!"

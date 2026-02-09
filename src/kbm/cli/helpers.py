@@ -3,7 +3,6 @@
 __all__ = [
     "format_config",
     "print_invalid",
-    "print_orphaned",
     "print_status",
     "print_summary",
     "setup_file_logging",
@@ -49,6 +48,7 @@ def setup_logging() -> None:
 
 def setup_file_logging(log_file: Path) -> None:
     """Configure file logging."""
+    log_file.parent.mkdir(parents=True, exist_ok=True)
     file_handler = RotatingFileHandler(
         log_file, maxBytes=10 * 1024 * 1024, backupCount=5
     )
@@ -101,43 +101,34 @@ def format_config(data: dict) -> list[str]:
     return lines
 
 
-def print_status(cfg: MemoryConfig) -> None:
+def print_status(memory: MemoryConfig) -> None:
     """Print one-line memory status: icon, name, file, engine, transport."""
     from . import console
 
     console.print(
-        f"{_status_icon(cfg)} [bold]{cfg.name}[/]"
-        f" • [dim]{cfg.file_path.name}[/]"
-        f" • [dim]{cfg.engine.value}[/]"
-        f" • [dim]{_transport_label(cfg)}[/]"
+        f"[bold]{memory.settings.name}[/]"
+        f" • [dim]{memory.engine.value}[/]"
+        f" • [dim]{_transport_label(memory)}[/]"
     )
 
 
-def print_invalid(config_file: Path, error: Exception) -> None:
+def print_invalid(name: str, error: Exception) -> None:
     """Print one-line status for an invalid/unreadable config."""
     from . import console
 
-    console.print(f"[red]●[/] [dim]{config_file.name}[/] • [dim]invalid: {error}[/]")
+    console.print(f"[red]●[/] [dim]{name}[/] • [dim]invalid: {error}[/]")
 
 
-def print_orphaned(data_dir: Path) -> None:
-    """Print one-line status for an orphaned data directory."""
-    from . import console
-
-    console.print(f"[yellow]●[/] [bold]{data_dir.name}[/] • [dim]orphaned[/]")
-
-
-def print_summary(cfg: MemoryConfig) -> None:
+def print_summary(memory: MemoryConfig) -> None:
     """Print a Panel with memory name, engine, transport, and paths."""
     from . import console
 
     title = (
-        f"{_status_icon(cfg)} [bold]{cfg.name}[/]"
-        f" • [dim]{cfg.engine.value}[/]"
-        f" • [dim]{_transport_label(cfg)}[/]"
+        f"[bold]{memory.settings.name}[/]"
+        f" • [dim]{memory.engine.value}[/]"
+        f" • [dim]{_transport_label(memory)}[/]"
     )
-    header = f"[bold]Config:[/] {cfg.file_path}"
-    header += f"\n[bold]Data:[/]   {cfg.data_path}"
+    header = f"[bold]Config:[/] {memory.settings.config_file}"
 
     console.print(
         Panel(
@@ -149,16 +140,12 @@ def print_summary(cfg: MemoryConfig) -> None:
     )
 
 
-def _transport_label(cfg: MemoryConfig) -> str:
+def _transport_label(memory: MemoryConfig) -> str:
     """Human-readable transport string."""
-    match cfg.transport:
+    match memory.transport:
         case Transport.STDIO:
             return "stdio"
         case Transport.HTTP:
-            return f"http://{cfg.host}:{cfg.port}"
+            return f"http://{memory.host}:{memory.port}"
         case _:
-            return cfg.transport.value
-
-
-def _status_icon(cfg: MemoryConfig) -> str:
-    return "[green]●[/]" if cfg.data_path.exists() else "[yellow]●[/]"
+            return memory.transport.value

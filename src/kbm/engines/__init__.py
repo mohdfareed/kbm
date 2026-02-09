@@ -11,19 +11,20 @@ from .chat_history import ChatHistoryEngine
 from .rag_anything import RAGAnythingEngine
 
 
-def get_engine(config: MemoryConfig) -> tuple[EngineBase, CanonStore]:
+def get_engine(memory: MemoryConfig) -> tuple[EngineBase, CanonStore]:
     """Get engine instance and its canonical store for config."""
-    config.ensure_dirs()
-    store = CanonStore(config.database_url, attachments_path=config.attachments_path)
+    store = CanonStore(
+        memory.settings.database_url, attachments_path=memory.settings.attachments_path
+    )
 
-    match config.engine:
+    match memory.engine:
         case Engine.CHAT_HISTORY:
             from kbm.engines.chat_history import ChatHistoryEngine
 
-            return ChatHistoryEngine(config, store), store
+            return ChatHistoryEngine(memory, store), store
         case Engine.RAG_ANYTHING:
             from kbm.engines.rag_anything import RAGAnythingEngine
 
-            return RAGAnythingEngine(config, store), store
+            return RAGAnythingEngine(memory, store), store
         case _:
-            raise NotImplementedError(f"Unsupported engine: {config.engine}")
+            raise NotImplementedError(f"Unsupported engine: {memory.config.engine}")

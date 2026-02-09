@@ -24,8 +24,8 @@ class ServerView:
     tools: list[Tool]
 
     @staticmethod
-    async def introspect(config: MemoryConfig) -> "ServerView":
-        mcp = build_server(config)
+    async def introspect(memory: MemoryConfig) -> "ServerView":
+        mcp = build_server(memory)
         async with Client(mcp) as client:
             init = client.initialize_result
             assert init is not None
@@ -36,8 +36,8 @@ class ServerView:
 @app.command()
 def inspect(name: str = MemoryNameArg) -> None:
     """Inspect memory MCP server."""
-    cfg = MemoryConfig.from_name(name)
-    view = asyncio.run(ServerView.introspect(cfg))
+    memory = MemoryConfig.from_name(name)
+    view = asyncio.run(ServerView.introspect(memory))
     _print_pretty(view)
 
 

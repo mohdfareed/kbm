@@ -67,7 +67,6 @@ $ kbm start [OPTIONS] [NAME]
 * `-t, --transport [stdio|http]`
 * `-H, --host TEXT`
 * `-p, --port INTEGER`
-* `-c, --create`: Create memory if it doesn&#x27;t exist
 * `--help`: Show this message and exit.
 
 ## `kbm list`

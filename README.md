@@ -24,7 +24,7 @@ kbm init notes && kbm start notes
 
 ## Configuration
 
-* Environment variables (`KBM_*`) override config. Loaded from `.env`, or shell.
+* Environment variables (`KBM_*`) override config. Loaded from `.env`, `.kbm.env`, or shell.
 * Data lives at `$KBM_HOME` (default: platform data dir).
   * `kbm home` displays the current home directory.
   * Backup/migrate by copying this directory.
@@ -93,6 +93,10 @@ For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` fla
 
 ## TODO
 
+- [ ] **Templates**: Support using a pre-existing memory config file for `init` calls.
+  - Look for a config file at `$KBM_HOME` to use for creating new memories.
+  - The file is manually edited by the user to override certain defaults.
+  - The path is shown using the command `kbm -S`, with other app settings.
 - [ ] **Authorization**: Implement role-based access control (RBAC) for HTTP transport.
   - Define permissions per tool.
   - Add config to define role-permission and user-role mappings.
@@ -103,3 +107,16 @@ For debugging, `$KBM_DEBUG` enables verbose logging, equivalent to `--debug` fla
 - [ ] **Re-indexing Command**: CLI command to rebuild engine indexes from canonical storage.
   - `kbm reindex <memory_name>`: Rebuilds the engine index for the specified memory using records from canonical storage.
   - Migration supported by changing engine type and re-indexing.
+- [ ] **GitHub Models Provider**: Add `Provider.GITHUB` convenience for rag-anything.
+  - OpenAI-compatible API at `https://models.github.ai/inference` — LLM + embeddings.
+  - Auth: GitHub PAT. Useful where only GitHub/Copilot access is available (IT policy).
+  - Default models: `gpt-4o-mini`, `text-embedding-3-small` (1536 dims).
+  - Implemented as preset on existing OpenAI provider (set `base_url` + defaults).
+- [ ] **MCP Sampling for LLM**: Use `ctx.sample()` for rag-anything LLM calls.
+  - Server borrows the client's LLM instead of direct API calls.
+  - Thread FastMCP `Context` into engine pipeline (store on instance per tool call).
+  - Sampling only covers text generation; embeddings still need a provider (GitHub, OpenAI, etc.).
+  - Fallback to configured provider for clients that don't support sampling.
+- [ ] **Documentation**: Add examples and templates to `docs/`.
+  - Add config files examples of authentication, GitHub LLM provider, etc.
+  - Add example docker compose files.
