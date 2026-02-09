@@ -110,9 +110,14 @@ class InfoResponse(BaseModel):
 
 
 class QueryResult(BaseModel):
-    id: str = Field(description="Unique record identifier.")
     content: str = Field(description="Matching record content.")
-    created_at: datetime = Field(description="When the record was created.")
+    # Optional query result metadata
+    id: str | None = Field(
+        default=None, description="Unique record identifier, if available."
+    )
+    created_at: datetime | None = Field(
+        default=None, description="When the record was created, if available."
+    )
     score: float | None = Field(
         default=None, description="Relevance score, if available."
     )

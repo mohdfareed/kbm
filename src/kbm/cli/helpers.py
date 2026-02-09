@@ -128,7 +128,7 @@ def print_summary(memory: MemoryConfig) -> None:
         f" • [dim]{memory.engine.value}[/]"
         f" • [dim]{_transport_label(memory)}[/]"
     )
-    header = f"[bold]Config:[/] {memory.settings.config_file}"
+    header = f"[bold]Data:[/] {memory.settings.root}"
 
     console.print(
         Panel(

@@ -3,12 +3,10 @@
 __all__: list[str] = []
 
 import asyncio
-import hashlib
 import logging
 import os
 import sysconfig
 from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -108,15 +106,7 @@ class RAGAnythingEngine(EngineBase):
         # RAG returns a single synthesized answer, not individual records.
         # The ID is derived from the query for traceability.
         return schema.QueryResponse(
-            results=[
-                schema.QueryResult(
-                    id=hashlib.sha256(query.encode()).hexdigest()[:16],
-                    content=str(result),
-                    created_at=datetime.now(),
-                )
-            ]
-            if result
-            else [],
+            results=[schema.QueryResult(content=str(result))] if result else [],
             query=query,
             total=1 if result else 0,
         )
