@@ -15,7 +15,10 @@
         "kbm-dev"
       ],
       "dev": {
-        "watch": "src/**/*.py",
+        "watch": [
+          "src/**/*.py",
+          ".kbm/memories/kbm-dev/config.yaml"
+        ],
         "debug": {
           "type": "debugpy"
         }

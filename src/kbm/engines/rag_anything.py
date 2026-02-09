@@ -159,10 +159,15 @@ class RAGAnythingEngine(EngineBase):
 
     async def _get_lightrag(self) -> LightRAG:
         if self._lightrag is None:
+            # Wrap bound methods in lambdas so LightRAG's
+            # ``asdict(self)`` → ``deepcopy`` doesn't traverse into the
+            # engine instance (which holds an unpicklable CanonStore).
+            # ``deepcopy`` treats ``FunctionType`` (lambdas) as atomic but
+            # follows ``MethodType`` (bound methods) into ``__self__``.
             self._lightrag = LightRAG(
                 working_dir=str(self.working_dir),
                 embedding_func=self._get_embedding_func(),
-                llm_model_func=self._llm_func,
+                llm_model_func=lambda prompt, **kw: self._llm_func(prompt, **kw),
             )
         return self._lightrag
 
