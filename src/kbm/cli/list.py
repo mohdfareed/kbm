@@ -13,7 +13,7 @@ def list_memories() -> None:
     found_any = False
 
     # All memories
-    for path in sorted(app_settings.memories_path.iterdir()):
+    for path in app_settings.memories:
         found_any = True
 
         try:  # Load config from file

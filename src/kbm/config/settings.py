@@ -44,6 +44,13 @@ class AppSettings(BaseAppSettings):
         """Directory for managed memory config files."""
         return self.home / "memories"
 
+    @property
+    def memories(self) -> list[Path]:
+        """List of all memory directories."""
+        if not self.memories_path.exists():
+            return []
+        return sorted([p for p in self.memories_path.iterdir() if p.is_dir()])
+
 
 app_settings = AppSettings()
 """Application settings singleton."""

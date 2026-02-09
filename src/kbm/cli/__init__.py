@@ -13,7 +13,11 @@ from kbm.config import app_settings
 
 from .helpers import format_config
 
-MemoryNameArg = typer.Argument(Path.cwd().name, help="Memory name.")
+MemoryNameArg = typer.Argument(
+    Path.cwd().name,
+    help="Memory name.",
+    autocompletion=lambda: [dir.name for dir in app_settings.memories],
+)
 
 console = Console()
 err_console = Console(stderr=True)
