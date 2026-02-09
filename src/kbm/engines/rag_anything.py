@@ -4,6 +4,8 @@ __all__: list[str] = []
 
 import hashlib
 import logging
+import os
+import sysconfig
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +20,12 @@ from kbm.store import CanonStore
 
 from . import schema
 from .base_engine import EngineBase, Operation
+
+# Ensure venv scripts/ is on PATH so RAGAnything can find the `mineru` CLI
+# (needed when running inside isolated tool environments like `uv tool`).
+_scripts_dir = sysconfig.get_path("scripts")
+if _scripts_dir and _scripts_dir not in os.environ.get("PATH", "").split(os.pathsep):
+    os.environ["PATH"] = _scripts_dir + os.pathsep + os.environ.get("PATH", "")
 
 
 def resolve_provider(
@@ -162,10 +170,10 @@ class RAGAnythingEngine(EngineBase):
     async def _get_lightrag(self) -> LightRAG:
         if self._lightrag is None:
             # Wrap bound methods in lambdas so LightRAG's
-            # ``asdict(self)`` → ``deepcopy`` doesn't traverse into the
+            # `asdict(self)` → `deepcopy` doesn't traverse into the
             # engine instance (which holds an unpicklable CanonStore).
-            # ``deepcopy`` treats ``FunctionType`` (lambdas) as atomic but
-            # follows ``MethodType`` (bound methods) into ``__self__``.
+            # `deepcopy` treats `FunctionType` (lambdas) as atomic but
+            # follows `MethodType` (bound methods) into `__self__`.
             self._lightrag = LightRAG(
                 working_dir=str(self.working_dir),
                 embedding_func=self._get_embedding_func(),
