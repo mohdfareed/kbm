@@ -6,8 +6,9 @@ import hashlib
 import uuid
 from pathlib import Path
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -40,6 +41,8 @@ class CanonStore:
             # Create tables if they don't exist
             async with self._engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                # FTS5 external-content table mirroring records
+                await self._create_fts_index(conn)
             self._ready = True
 
     async def close(self) -> None:
@@ -108,20 +111,23 @@ class CanonStore:
             ).scalar() or 0
 
     async def search_records(self, query: str, limit: int = 10) -> list[Record]:
-        """Substring search in content and source."""
+        """Full-text search over content and source, ranked by relevance."""
         await self._ensure_ready()
         async with self._sessions() as s:
-            stmt = (
-                select(Record)
-                .where(
-                    or_(
-                        Record.content.contains(query),
-                        Record.source.contains(query),
-                    )
-                )
-                .limit(limit)
-            )
-            return list((await s.execute(stmt)).scalars().all())
+            # Use FTS5 MATCH with bm25 ranking
+            rows = await self._query_fts(s, query, limit)
+            if not rows:
+                return []
+
+            # Fetch full Record objects in ranked order
+            ids = [r.id for r in rows]
+            records_by_id = {
+                r.id: r
+                for r in (await s.execute(select(Record).where(Record.id.in_(ids))))
+                .scalars()
+                .all()
+            }
+            return [records_by_id[rid] for rid in ids if rid in records_by_id]
 
     # MARK: File Handling
 
@@ -168,6 +174,45 @@ class CanonStore:
         if not dest.exists():
             dest.write_bytes(data)
         return dest
+
+    async def _create_fts_index(self, conn: AsyncConnection):
+        """Create FTS5 virtual table and triggers for syncing with records."""
+        # FTS5 external-content table mirroring records
+        await conn.execute(
+            text(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS records_fts "
+                "USING fts5(content, source, content=records, content_rowid=rowid)"
+            )
+        )
+        # Auto-sync triggers
+        await conn.execute(
+            text(
+                "CREATE TRIGGER IF NOT EXISTS records_ai AFTER INSERT ON records "
+                "BEGIN "
+                "INSERT INTO records_fts(rowid, content, source) "
+                "VALUES (NEW.rowid, NEW.content, NEW.source); "
+                "END"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE TRIGGER IF NOT EXISTS records_ad AFTER DELETE ON records "
+                "BEGIN "
+                "INSERT INTO records_fts(records_fts, rowid, content, source) "
+                "VALUES ('delete', OLD.rowid, OLD.content, OLD.source); "
+                "END"
+            )
+        )
+
+    async def _query_fts(self, session: AsyncSession, query: str, limit: int):
+        """Query FTS index for matching records."""
+        fts_stmt = text(
+            "SELECT r.id FROM records r "
+            "JOIN records_fts ON records_fts.rowid = r.rowid "
+            "WHERE records_fts MATCH :query "
+            "ORDER BY records_fts.rank LIMIT :limit"
+        )
+        return (await session.execute(fts_stmt, {"query": query, "limit": limit})).all()
 
     # MARK: Private
 

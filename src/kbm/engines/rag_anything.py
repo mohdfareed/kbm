@@ -2,6 +2,7 @@
 
 __all__: list[str] = []
 
+import asyncio
 import hashlib
 import logging
 import os
@@ -83,6 +84,7 @@ class RAGAnythingEngine(EngineBase):
 
         self._lightrag: LightRAG | None = None
         self._rag: raganything.RAGAnything | None = None
+        self._rag_lock = asyncio.Lock()  # serialize RAG pipeline operations
 
     # MARK: Hook overrides
 
@@ -124,12 +126,13 @@ class RAGAnythingEngine(EngineBase):
     ) -> schema.InsertResponse:
         """Store in canonical + index in RAG pipeline."""
         result = await super()._insert(content, doc_id)
-        rag = self._get_rag(await self._get_lightrag())
-        await rag.insert_content_list(
-            content_list=[{"type": "text", "text": content, "page_idx": 0}],
-            file_path="text_insert.txt",
-            doc_id=result.id,
-        )
+        async with self._rag_lock:
+            rag = self._get_rag(await self._get_lightrag())
+            await rag.insert_content_list(
+                content_list=[{"type": "text", "text": content, "page_idx": 0}],
+                file_path="text_insert.txt",
+                doc_id=result.id,
+            )
         return schema.InsertResponse(
             id=result.id, message="Inserted into knowledge graph"
         )
@@ -141,12 +144,13 @@ class RAGAnythingEngine(EngineBase):
         result = await super()._insert_file(file_path, content, doc_id)
         path = Path(file_path).expanduser().resolve()
 
-        rag = self._get_rag(await self._get_lightrag())
-        await rag.process_document_complete(
-            file_path=str(path),
-            output_dir=str(self.working_dir / "output"),
-            formula=False,  # FIXME: MinerU/transformers incompatibility bug (external)
-        )
+        async with self._rag_lock:
+            rag = self._get_rag(await self._get_lightrag())
+            await rag.process_document_complete(
+                file_path=str(path),
+                output_dir=str(self.working_dir / "output"),
+                formula=False,  # FIXME: MinerU/transformers incompatibility bug
+            )
         return schema.InsertResponse(id=result.id, message=f"Ingested: {path.name}")
 
     # MARK: Internal
