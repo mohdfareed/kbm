@@ -135,7 +135,9 @@ class RAGAnythingEngine(EngineBase):
 
         rag = self._get_rag(await self._get_lightrag())
         await rag.process_document_complete(
-            file_path=str(path), output_dir=str(self.working_dir / "output")
+            file_path=str(path),
+            output_dir=str(self.working_dir / "output"),
+            formula=False,  # FIXME: MinerU/transformers incompatibility bug (external)
         )
         return schema.InsertResponse(id=result.id, message=f"Ingested: {path.name}")
 
