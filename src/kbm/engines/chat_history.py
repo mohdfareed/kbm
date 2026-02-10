@@ -19,6 +19,7 @@ class ChatHistoryEngine(EngineBase):
             Operation.QUERY,
             Operation.INSERT,
             Operation.DELETE,
+            Operation.GET_RECORD,
             Operation.LIST_RECORDS,
         }
     )  # text-only, no file support

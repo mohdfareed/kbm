@@ -64,6 +64,7 @@ class RAGAnythingEngine(EngineBase):
             Operation.QUERY,
             Operation.INSERT,
             Operation.INSERT_FILE,
+            Operation.GET_RECORD,
             Operation.LIST_RECORDS,
         }
     )

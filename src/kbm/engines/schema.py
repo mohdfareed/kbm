@@ -28,6 +28,12 @@ INSERT_FILE_DESCRIPTION = (
 
 DELETE_DESCRIPTION = "Remove a record from the knowledge base."
 
+GET_RECORD_DESCRIPTION = (
+    "Retrieve a specific record by ID.\n\n"
+    "Returns the full record content, useful for inspecting "
+    "before deletion or viewing complete data."
+)
+
 LIST_RECORDS_DESCRIPTION = "List records in the knowledge base."
 
 # MARK: Tool annotations
@@ -53,6 +59,11 @@ INSERT_FILE_ANNOTATIONS = ToolAnnotations(
 )
 DELETE_ANNOTATIONS = ToolAnnotations(
     destructiveHint=True,
+)
+GET_RECORD_ANNOTATIONS = ToolAnnotations(
+    readOnlyHint=True,
+    openWorldHint=False,
+    idempotentHint=True,
 )
 LIST_RECORDS_ANNOTATIONS = ToolAnnotations(
     readOnlyHint=True,
@@ -147,10 +158,26 @@ class DeleteResponse(BaseModel):
     message: str = Field(default="Deleted", description="Status message.")
 
 
+class GetRecordResponse(BaseModel):
+    id: str = Field(description="Unique record identifier.")
+    content: str = Field(description="Full record content.")
+    content_type: str = Field(description="Type of stored content (text, file).")
+    source: str | None = Field(
+        default=None,
+        description="Original source: filename for files, None for inserted text.",
+    )
+    created_at: datetime = Field(description="When the record was created.")
+    found: bool = Field(description="Whether the record was found.")
+
+
 class RecordSummary(BaseModel):
     id: str = Field(description="Unique record identifier.")
     created_at: datetime = Field(description="When the record was created.")
     content_type: str = Field(description="Type of stored content (text, file).")
+    source: str | None = Field(
+        default=None,
+        description="Original source: filename for files, None for inserted text.",
+    )
     preview: str = Field(description="Truncated content preview.")
 
 

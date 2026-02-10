@@ -33,6 +33,7 @@ class Operation(Enum):
     INSERT = auto()
     INSERT_FILE = auto()
     DELETE = auto()
+    GET_RECORD = auto()
     LIST_RECORDS = auto()
 
     @property
@@ -102,6 +103,13 @@ class EngineBase(ABC):
         return await self._call_hook(self._delete, record_id)
 
     @tool(
+        description=schema.GET_RECORD_DESCRIPTION,
+        annotations=schema.GET_RECORD_ANNOTATIONS,
+    )
+    async def get_record(self, record_id: schema.RecordId) -> schema.GetRecordResponse:
+        return await self._call_hook(self._get_record, record_id)
+
+    @tool(
         description=schema.LIST_RECORDS_DESCRIPTION,
         annotations=schema.LIST_RECORDS_ANNOTATIONS,
     )
@@ -142,6 +150,19 @@ class EngineBase(ABC):
             message="Deleted" if found else "Not found",
         )
 
+    async def _get_record(self, record_id: str) -> schema.GetRecordResponse:
+        record = await self._store.get_record(record_id)
+        if record is None:
+            raise ToolError(f"Record not found: {record_id}")
+        return schema.GetRecordResponse(
+            id=record.id,
+            content=record.content,
+            content_type=record.content_type,
+            source=record.source,
+            created_at=record.created_at,
+            found=True,
+        )
+
     async def _list_records(
         self, limit: int = 100, offset: int = 0
     ) -> schema.ListResponse:
@@ -152,6 +173,7 @@ class EngineBase(ABC):
                 id=r.id,
                 created_at=r.created_at,
                 content_type=r.content_type,
+                source=r.source,
                 preview=(
                     r.content[:100] + "..." if len(r.content) > 100 else r.content
                 ),
