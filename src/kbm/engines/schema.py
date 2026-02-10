@@ -107,6 +107,11 @@ class InfoResponse(BaseModel):
     metadata: dict[str, str] = Field(
         default={}, description="Engine-specific configuration details."
     )
+    instructions: str = Field(
+        default="",
+        description="How to effectively use this knowledge base. "
+        "Describes the engine's capabilities and best practices.",
+    )
 
 
 class QueryResult(BaseModel):

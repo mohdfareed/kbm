@@ -72,6 +72,13 @@ class Transport(str, Enum):
     HTTP = "http"
 
 
+SERVER_INSTRUCTIONS = (
+    "This is a knowledge base management tool that provides persistent memory storage. "
+    "**IMPORTANT:** Always call the `info` tool first to understand the engine before "
+    "attempting to search or interact with the memory."
+)
+
+
 class MemoryConfig(BaseAppConfig):
     """The configuration for a knowledge base memory."""
 
@@ -99,6 +106,11 @@ class MemoryConfig(BaseAppConfig):
     github_auth: GithubAuthConfig = GithubAuthConfig()
 
     # Helpers
+
+    @property
+    def mcp_instructions(self) -> str:
+        """Complete instructions for the MCP server (constant + user config)."""
+        return f"{SERVER_INSTRUCTIONS}\n\n{self.instructions}"
 
     @classmethod
     def from_name(cls, name: str, **kwargs) -> "MemoryConfig":

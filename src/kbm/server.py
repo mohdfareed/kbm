@@ -35,7 +35,7 @@ def build_server(memory: MemoryConfig) -> FastMCP:
     auth_provider = build_auth_provider(memory)
     mcp = FastMCP(
         name=memory.settings.name,
-        instructions=memory.instructions,
+        instructions=memory.mcp_instructions,
         auth=auth_provider,
         lifespan=lifespan,
     )

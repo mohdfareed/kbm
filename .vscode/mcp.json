@@ -15,10 +15,12 @@
         "kbm-dev"
       ],
       "dev": {
-        "watch": [
-          "src/**/*.py",
-          ".kbm/memories/kbm-dev/config.yaml"
-        ],
+        // Only enable during active development to avoid
+        // window focus loss issues on server restarts.
+        // "watch": [
+        //   "src/**/*.py",
+        //   ".kbm/memories/kbm-dev/config.yaml"
+        // ],
         "debug": {
           "type": "debugpy"
         }

@@ -97,6 +97,14 @@ class RAGAnythingEngine(EngineBase):
                 "embedding_model": self.config.embedding_model,
                 "embedding_dim": str(self.config.embedding_dim),
             },
+            instructions=(
+                "RAG engine (RAG-Anything) with knowledge graphs and semantic search. "
+                f"Mode: '{self.config.query_mode}'. "
+                "Insert: text and files are parsed into entities and relationships."
+                "Query: use natural language questions - the system extracts "
+                "context and synthesizes answers from multiple sources rather "
+                "than returning raw documents."
+            ),
         )
 
     async def _query(self, query: str, top_k: int = 10) -> schema.QueryResponse:
