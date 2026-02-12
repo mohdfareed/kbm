@@ -99,14 +99,14 @@ class RAGAnythingEngine(EngineBase):
             instructions=(
                 "RAG engine (RAG-Anything) with knowledge graphs and semantic search. "
                 f"Mode: '{self.config.query_mode}'. "
-                "Insert: text and files are parsed into entities and relationships."
+                "Insert: text and files are parsed into entities and relationships. "
                 "Query: use natural language questions - the system extracts "
                 "context and synthesizes answers from multiple sources rather "
                 "than returning raw documents."
             ),
         )
 
-    async def _query(self, query: str, top_k: int = 10) -> schema.QueryResponse:
+    async def _query(self, query: str, top_k: int = 1) -> schema.QueryResponse:
         rag = self._get_rag(await self._get_lightrag())
         result = await rag.aquery_vlm_enhanced(query, mode=self.config.query_mode)
 
