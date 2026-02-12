@@ -2,6 +2,7 @@
 
 import os
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -37,6 +38,7 @@ class Engine(str, Enum):
 
     CHAT_HISTORY = "chat-history"
     RAG_ANYTHING = "rag-anything"
+    MEM0 = "mem0"
 
 
 class RAGAnythingConfig(BaseModel):
@@ -49,16 +51,48 @@ class RAGAnythingConfig(BaseModel):
 
     # Provider settings
     provider: Provider = Provider.OPENAI
-    api_key: str | None = None  # env var default set by provider
-    base_url: str | None = None  # env var default set by provider
-    api_version: str | None = None  # Azure only
+    api_key: str | None = None
 
-    # Model settings
+    # LLM settings
     query_mode: str = "mix"
     llm_model: str = "gpt-4o-mini"
     vision_model: str = "gpt-4o-mini"
+
+    # Embedding settings
     embedding_model: str = "text-embedding-3-large"
     embedding_dim: int = 3072
+
+    # Provider-specific extras (e.g. base_url, api_version, azure_kwargs).
+    # Passed through to the underlying LLM/embedding functions as **kwargs.
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class Mem0Config(BaseModel):
+    """Mem0 engine configuration.
+
+    The ``config`` dict is passed directly to mem0's ``MemoryConfig``.
+    All features are enabled by default (vision, reranker, graph store).
+    Set a key to ``null`` in YAML to disable it.
+
+    See: https://docs.mem0.ai/open-source/configuration
+    """
+
+    config: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "llm": {
+                "provider": "openai",
+                "config": {"enable_vision": True},
+            },
+            "reranker": {
+                "provider": "sentence_transformer",
+                "config": {"model": "cross-encoder/ms-marco-MiniLM-L-6-v2"},
+            },
+            "graph_store": {
+                "provider": "kuzu",
+                "config": {},
+            },
+        }
+    )
 
 
 # MARK: Memory
@@ -100,6 +134,7 @@ class MemoryConfig(BaseAppConfig):
     # engine settings
     engine: Engine = Engine.CHAT_HISTORY
     rag_anything: RAGAnythingConfig = RAGAnythingConfig()
+    mem0: Mem0Config = Mem0Config()
 
     # authentication settings
     auth: AuthProvider = AuthProvider.NONE

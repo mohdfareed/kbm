@@ -77,8 +77,6 @@ class RAGAnythingEngine(EngineBase):
         self.working_dir.mkdir(parents=True, exist_ok=True)
 
         self._api_key = self.config.api_key
-        self._base_url = self.config.base_url
-        self._api_version = self.config.api_version  # Azure only
         self._complete_func, self._embed_func = resolve_provider(self.config.provider)
 
         self._lightrag: LightRAG | None = None
@@ -154,13 +152,6 @@ class RAGAnythingEngine(EngineBase):
 
     # MARK: Internal
 
-    def _provider_kwargs(self) -> dict[str, Any]:
-        """Extra kwargs required by the active provider (e.g. api_version)."""
-        extra: dict[str, Any] = {}
-        if self._api_version:  # Azure
-            extra["api_version"] = self._api_version
-        return extra
-
     def _get_rag(self, lightrag: LightRAG) -> raganything.RAGAnything:
         if self._rag is None:
             self._rag = raganything.RAGAnything(
@@ -191,8 +182,7 @@ class RAGAnythingEngine(EngineBase):
                 texts,
                 model=self.config.embedding_model,
                 api_key=self._api_key,
-                base_url=self._base_url,
-                **self._provider_kwargs(),
+                **self.config.config,
             ),
         )
 
@@ -201,8 +191,7 @@ class RAGAnythingEngine(EngineBase):
             model=self.config.llm_model,
             prompt=prompt,
             api_key=self._api_key,
-            base_url=self._base_url,
-            **self._provider_kwargs(),
+            **self.config.config,
             **kwargs,
         )
 
@@ -232,7 +221,6 @@ class RAGAnythingEngine(EngineBase):
             prompt=content,  # type: ignore[arg-type]
             system_prompt=system_prompt,
             api_key=self._api_key,
-            base_url=self._base_url,
-            **self._provider_kwargs(),
+            **self.config.config,
             **kwargs,
         )
