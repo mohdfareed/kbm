@@ -48,7 +48,7 @@ jobs:
 
       - name: Update coverage badge
         run: |
-          COV=$(uv run pytest -q --cov=kbm --cov-report=term-missing | tail -1 | awk '{print $NF}' | tr -d '%')
+          COV=$(uv run pytest -q --cov=kbm --cov-report=term-missing | grep '^TOTAL' | awk '{print $NF}' | tr -d '%')
           if (( COV >= 90 )); then COLOR="brightgreen"
           elif (( COV >= 75 )); then COLOR="green"
           elif (( COV >= 60 )); then COLOR="yellow"
