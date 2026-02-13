@@ -2,6 +2,7 @@
 
 import os
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -147,8 +148,22 @@ class MemoryConfig(BaseAppConfig):
         """Complete instructions for the MCP server (constant + user config)."""
         return f"{SERVER_INSTRUCTIONS}\n\n{self.instructions}"
 
+    # Factory methods
+
     @classmethod
     def from_name(cls, name: str, **kwargs) -> "MemoryConfig":
         """Load a named memory config."""
         settings = MemorySettings(name=name)
         return cls._from_file(settings.config_file, settings=settings, **kwargs)
+
+    @classmethod
+    def from_template(
+        cls, file: Path, settings: MemorySettings, **kwargs
+    ) -> "MemoryConfig":
+        """Load a memory config from a template file and settings."""
+        return cls._from_file(file, settings=settings, **kwargs)
+
+    @classmethod
+    def default(cls, settings: MemorySettings, **kwargs) -> "MemoryConfig":
+        """Create a default memory config with the given settings."""
+        return MemoryConfig(settings=settings, **kwargs)

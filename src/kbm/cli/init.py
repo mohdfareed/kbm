@@ -10,14 +10,13 @@ from .helpers import print_summary
 
 def create_memory(settings: MemorySettings, **kwargs) -> MemoryConfig:
     """Create a new memory config file and return the config."""
-    if app_settings.template_path.exists():
-        memory = MemoryConfig._from_file(
-            app_settings.template_path, settings=settings, **kwargs
-        )
-    else:  # Create default memory config
-        memory = MemoryConfig(settings=settings, **kwargs)
+    settings.ensure_dirs()
 
-    memory.settings.ensure_dirs()
+    if (template := app_settings.template_path) and template.exists():
+        memory = MemoryConfig.from_template(template, settings=settings, **kwargs)
+    else:
+        memory = MemoryConfig.default(settings=settings, **kwargs)
+
     memory.settings.config_file.write_text(memory.dump_yaml(full=False))
     return memory
 
