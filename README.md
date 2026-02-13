@@ -1,7 +1,7 @@
 # KBM - Knowledge Base Manager
 
 [![CI](https://github.com/mohdfareed/kbm/actions/workflows/ci.yaml/badge.svg)](https://github.com/mohdfareed/kbm/actions/workflows/ci.yaml)
-![Coverage](https://img.shields.io/badge/coverage-77%25-green)
+![Coverage](https://img.shields.io/badge/coverage-6.62s%25-red)
 [![Version](https://img.shields.io/github/v/tag/mohdfareed/kbm?label=version)](https://github.com/mohdfareed/kbm/releases)
 [![Python](https://img.shields.io/badge/python-3.12+-blue)](https://github.com/mohdfareed/kbm)
 [![License](https://img.shields.io/github/license/mohdfareed/kbm)](LICENSE)
