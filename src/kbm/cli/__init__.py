@@ -3,6 +3,8 @@
 __all__ = ["app", "main"]
 
 import logging
+import os
+import socket
 import sys
 from pathlib import Path
 
@@ -14,7 +16,7 @@ from kbm.config import app_settings
 from .helpers import format_config
 
 MemoryNameArg = typer.Argument(
-    Path.cwd().name,
+    os.environ.get("KBM_NAME") or Path.cwd().name or socket.gethostname(),
     help="Memory name.",
     autocompletion=lambda: [dir.name for dir in app_settings.memories],
 )

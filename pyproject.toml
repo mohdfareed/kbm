@@ -24,7 +24,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.5",
     "pyright>=1.1",
     "pytest-asyncio>=1.3",
     "pytest-cov>=7.0",
@@ -46,8 +45,8 @@ module-name = ["kbm"]
 # MARK: - Tool Configuration
 
 [tool.ruff]
+src = ["src", "tests"]
 line-length = 88
-src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "I", "W", "RUF"]

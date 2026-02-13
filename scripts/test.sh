@@ -5,7 +5,6 @@ cd "$(dirname "$0")/.."
 echo "==> Updating dependencies..."
 uv lock --upgrade
 uv sync --dev
-uv run pre-commit install
 
 echo
 echo "==> Formatting..."
@@ -24,8 +23,8 @@ echo "==> Running tests..."
 uv run pytest -q --cov=kbm --cov-report=term-missing
 
 echo
-echo "==> Checking docs generation..."
-./scripts/docs.sh
+echo "==> Generating docs..."
+uv run typer kbm utils docs > docs/cli.md
 
 echo
 echo "==> All checks passed!"

@@ -13,28 +13,24 @@ from .helpers import print_status, setup_file_logging
 @app.command()
 def start(
     name: str = MemoryNameArg,
-    engine: Engine | None = typer.Option(
-        None, "-e", "--engine", help="Override engine for this session"
-    ),
+    engine: Engine | None = typer.Option(None, "-e", "--engine", help="Memory engine."),
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
     port: int | None = typer.Option(None, "-p", "--port"),
 ) -> None:
     """Start the MCP server."""
-    overrides = {}
-    if engine is not None:
-        overrides["engine"] = engine
-
     try:  # Load config
-        memory = MemoryConfig.from_name(name, **overrides)
+        memory = MemoryConfig.from_name(name)
     except FileNotFoundError:
         from .init import create_memory
 
         # Create new config with defaults
         console.print(f"[yellow]Memory '{name}' not found. Creating new memory...[/]")
-        memory = create_memory(MemorySettings(name=name), **overrides)
+        memory = create_memory(MemorySettings(name=name))
 
     # Handle CLI overrides
+    if engine:
+        memory.engine = engine
     if transport:
         memory.transport = transport
     if host:

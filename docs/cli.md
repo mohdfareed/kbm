@@ -63,7 +63,7 @@ $ kbm start [OPTIONS] [NAME]
 
 **Options**:
 
-* `-e, --engine [chat-history|rag-anything|mem0]`: Override engine for this session
+* `-e, --engine [chat-history|rag-anything|mem0]`: Memory engine.
 * `-t, --transport [stdio|http]`
 * `-H, --host TEXT`
 * `-p, --port INTEGER`

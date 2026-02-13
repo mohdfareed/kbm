@@ -1,31 +1,24 @@
 # Git
-.git
-.github
+.git/
+.github/
 .gitignore
-.pre-commit-config.yaml
 
 # Python
-.venv
-__pycache__
-*.pyc
-.pytest_cache
-.ruff_cache
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
 .coverage
 
 # IDE
-.vscode
-.DS_Store
+.vscode/
 .editorconfig
 .python-version
 
 # Project
-.kbm
-.kbm.*
-.env
+docker/
 docs/
 scripts/
 tests/
-
-# Docker
-docker/*.yaml
-docker/Dockerfile
+.env
+.kbm*
