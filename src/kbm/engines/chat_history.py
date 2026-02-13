@@ -1,18 +1,27 @@
-"""Chat history engine - simple text search over canonical store."""
+"""Chat history engine — simple full-text search over the canonical store."""
 
 __all__: list[str] = []
 
 import logging
+from pathlib import Path
 
+from kbm import schema
 from kbm.config import Engine, MemoryConfig
 from kbm.store import CanonStore
 
-from . import schema
-from .base_engine import EngineBase, Operation
+from .base import BaseEngine, Operation
+
+logger = logging.getLogger(__name__)
 
 
-class ChatHistoryEngine(EngineBase):
-    logger = logging.getLogger(__name__)
+class ChatHistoryEngine(BaseEngine):
+    """Full-text search engine backed by SQLite FTS5.
+
+    This is the simplest engine: it adds no indexing side-effects.
+    Queries use the canonical store's built-in FTS5 full-text search
+    with BM25 ranking.
+    """
+
     supported_operations = frozenset(
         {
             Operation.INFO,
@@ -25,9 +34,10 @@ class ChatHistoryEngine(EngineBase):
     )  # text-only, no file support
 
     def __init__(self, memory: MemoryConfig, store: CanonStore) -> None:
-        super().__init__(memory, store)
+        logger.info(f"Initializing {memory.engine} engine...")
+        self._store = store
 
-    async def _info(self) -> schema.InfoResponse:
+    async def info(self) -> schema.InfoResponse:
         count = await self._store.count_records()
         return schema.InfoResponse(
             engine=Engine.CHAT_HISTORY.value,
@@ -40,10 +50,19 @@ class ChatHistoryEngine(EngineBase):
             ),
         )
 
-    async def _query(self, query: str, top_k: int = 10) -> schema.QueryResponse:
+    async def query(self, query: str, top_k: int = 10) -> schema.QueryResponse:
         records = await self._store.search_records(query, top_k)
         results = [
             schema.QueryResult(id=r.id, content=r.content, created_at=r.created_at)
             for r in records
         ]
         return schema.QueryResponse(results=results, query=query, total=len(results))
+
+    async def insert(self, content: str, record_id: str) -> str | None:
+        return None  # FTS5 index is maintained by SQLite triggers
+
+    async def insert_file(self, path: Path, record_id: str) -> str | None:
+        return None  # Files are maintained by local file system and SQLite db
+
+    async def delete(self, record_id: str) -> None:
+        pass  # FTS5 cleanup is handled by SQLite triggers

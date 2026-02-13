@@ -69,7 +69,8 @@ This uses OAuth 2.0 - users authenticate via GitHub, and the server validates th
 
 ```sh
 git clone https://github.com/mohdfareed/kbm && cd kbm
-./scripts/run.sh -h  # run CLI
+./scripts/run.sh -h  # run CLI through `uv`
+./scripts/run.sh -i  # install dev version locally
 ./scripts/test.sh    # must be used before committing
 ```
 
@@ -102,9 +103,4 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 - [ ] **Documentation**: Add examples and templates to `docs/`.
   - Add config file examples with authentication, GitHub-provided LLMs, etc.
   - Add example docker compose files.
-- [ ] **Codebase Simplification**: Simplify/refactor certain messy modules.
-  - `schema.py`: Consolidate into tuples/dicts; use factory for responses.
-  - `cli/helpers.py`: Merge display functions with mode parameter.
-  - `cli/inspect.py`: Simplify Rich formatting.
-  - `config/`: Merge related enums and models.
 - [ ] **Display Config Options**: In `kbm status`, show possible enum values.

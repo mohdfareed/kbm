@@ -4,7 +4,7 @@ import typer
 
 from kbm.config import Engine, MemoryConfig, Transport
 from kbm.config.settings import MemorySettings
-from kbm.server import run_server
+from kbm.mcp.server import run_server
 
 from . import MemoryNameArg, app, console
 from .helpers import print_status, setup_file_logging

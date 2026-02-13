@@ -12,7 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from kbm.config import MemoryConfig
-from kbm.server import build_server
+from kbm.mcp.server import build_server
 
 from . import MemoryNameArg, app, console
 

@@ -9,7 +9,6 @@ from .helpers import print_invalid, print_status
 @app.command(name="list")
 def list_memories() -> None:
     """List all memories."""
-    data_dirs: list[str | None] = []
     found_any = False
 
     # All memories
@@ -18,13 +17,11 @@ def list_memories() -> None:
 
         try:  # Load config from file
             memory = MemoryConfig.from_name(path.name)
-            data_dirs.append(str(memory.settings.root.absolute()))
             print_status(memory)
 
         # Handle invalid config files
         except Exception as e:
             print_invalid(path.name, e)
-            data_dirs.append(None)
 
     # No memories or data found
     if not found_any:

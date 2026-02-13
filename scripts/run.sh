@@ -9,4 +9,11 @@ if [[ "$1" == "--rebuild" || "$1" == "-r" ]]; then
     uv sync --quiet
 fi
 
+# Use --install/-i to force install first
+if [[ "$1" == "--install" || "$1" == "-i" ]]; then
+    shift
+    uv tool install . -e --force
+    exit 0
+fi
+
 exec uv run --quiet kbm "$@"

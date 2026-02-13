@@ -1,4 +1,4 @@
-"""RAG-Anything engine - multi-modal RAG with knowledge graphs."""
+"""RAG-Anything engine — multi-modal RAG with knowledge graphs."""
 
 __all__: list[str] = []
 
@@ -14,17 +14,19 @@ import raganything
 from lightrag import LightRAG
 from lightrag.utils import EmbeddingFunc
 
+from kbm import schema
 from kbm.config import MemoryConfig, RAGAnythingConfig
-from kbm.store import CanonStore
+from kbm.config.config import Engine
 
-from . import schema
-from .base_engine import EngineBase, Operation
+from .base import BaseEngine, Operation
 
 # Ensure venv scripts/ is on PATH so RAGAnything can find the `mineru` CLI
 # (needed when running inside isolated tool environments like `uv tool`).
 _scripts_dir = sysconfig.get_path("scripts")
 if _scripts_dir and _scripts_dir not in os.environ.get("PATH", "").split(os.pathsep):
     os.environ["PATH"] = _scripts_dir + os.pathsep + os.environ.get("PATH", "")
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_provider(
@@ -56,8 +58,14 @@ def resolve_provider(
             raise ValueError(f"Unsupported provider: {provider}")
 
 
-class RAGAnythingEngine(EngineBase):
-    logger = logging.getLogger(__name__)
+class RAGAnythingEngine(BaseEngine):
+    """Multi-modal RAG engine with knowledge graphs.
+
+    Text and files are parsed into entities and relationships in a
+    knowledge graph.  Queries extract context and synthesize answers
+    from multiple sources rather than returning raw documents.
+    """
+
     supported_operations = frozenset(
         {
             Operation.INFO,
@@ -67,11 +75,10 @@ class RAGAnythingEngine(EngineBase):
             Operation.GET_RECORD,
             Operation.LIST_RECORDS,
         }
-    )
+    )  # no DELETE — cannot remove from knowledge graph
 
-    def __init__(self, memory: MemoryConfig, store: CanonStore) -> None:
-        super().__init__(memory, store)
-
+    def __init__(self, memory: MemoryConfig) -> None:
+        logger.info(f"Initializing {memory.engine} engine...")
         self.config = memory.rag_anything
         self.working_dir = memory.settings.data_path / "rag_anything"
         self.working_dir.mkdir(parents=True, exist_ok=True)
@@ -83,13 +90,12 @@ class RAGAnythingEngine(EngineBase):
         self._rag: raganything.RAGAnything | None = None
         self._rag_lock = asyncio.Lock()  # serialize RAG pipeline operations
 
-    # MARK: Hook overrides
+    # MARK: Protocol methods
 
-    async def _info(self) -> schema.InfoResponse:
-        count = await self._store.count_records()
+    async def info(self) -> schema.InfoResponse:
         return schema.InfoResponse(
-            engine="rag-anything",
-            records=count,
+            engine=Engine.RAG_ANYTHING.value,
+            records=0,  # record count is managed by MemoryTools
             metadata={
                 "query_mode": self.config.query_mode,
                 "llm_model": self.config.llm_model,
@@ -106,41 +112,29 @@ class RAGAnythingEngine(EngineBase):
             ),
         )
 
-    async def _query(self, query: str, top_k: int = 1) -> schema.QueryResponse:
+    async def query(self, query: str, top_k: int = 1) -> schema.QueryResponse:
         rag = self._get_rag(await self._get_lightrag())
         result = await rag.aquery_vlm_enhanced(query, mode=self.config.query_mode)
 
-        # RAG returns a single synthesized answer, not individual records.
-        # The ID is derived from the query for traceability.
         return schema.QueryResponse(
             results=[schema.QueryResult(content=str(result))] if result else [],
             query=query,
             total=1 if result else 0,
         )
 
-    async def _insert(
-        self, content: str, doc_id: str | None = None
-    ) -> schema.InsertResponse:
-        """Store in canonical + index in RAG pipeline."""
-        result = await super()._insert(content, doc_id)
+    async def insert(self, content: str, record_id: str) -> str | None:
+        """Index text content into the RAG knowledge graph."""
         async with self._rag_lock:
             rag = self._get_rag(await self._get_lightrag())
             await rag.insert_content_list(
                 content_list=[{"type": "text", "text": content, "page_idx": 0}],
                 file_path="text_insert.txt",
-                doc_id=result.id,
+                doc_id=record_id,
             )
-        return schema.InsertResponse(
-            id=result.id, message="Inserted into knowledge graph"
-        )
+        return "Inserted into knowledge graph"
 
-    async def _insert_file(
-        self, file_path: str, content: str | None = None, doc_id: str | None = None
-    ) -> schema.InsertResponse:
-        """Store in canonical + ingest into RAG pipeline."""
-        result = await super()._insert_file(file_path, content, doc_id)
-        path = Path(file_path).expanduser().resolve()
-
+    async def insert_file(self, path: Path, record_id: str) -> str | None:
+        """Ingest a file into the RAG pipeline."""
         async with self._rag_lock:
             rag = self._get_rag(await self._get_lightrag())
             await rag.process_document_complete(
@@ -148,7 +142,10 @@ class RAGAnythingEngine(EngineBase):
                 output_dir=str(self.working_dir / "output"),
                 formula=False,  # FIXME: MinerU/transformers incompatibility bug
             )
-        return schema.InsertResponse(id=result.id, message=f"Ingested: {path.name}")
+        return f"Ingested: {path.name}"
+
+    async def delete(self, record_id: str) -> None:
+        raise NotImplementedError("RAG-Anything engine does not support deletion")
 
     # MARK: Internal
 

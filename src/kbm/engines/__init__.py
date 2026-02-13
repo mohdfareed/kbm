@@ -1,35 +1,13 @@
 """Storage engines."""
 
-__all__ = ["ChatHistoryEngine", "Mem0Engine", "RAGAnythingEngine", "get_engine"]
+__all__ = [
+    "BaseEngine",
+    "ChatHistoryEngine",
+    "Mem0Engine",
+    "RAGAnythingEngine",
+]
 
-
-from kbm.config import Engine, MemoryConfig
-from kbm.store import CanonStore
-
-from .base_engine import EngineBase
+from .base import BaseEngine
 from .chat_history import ChatHistoryEngine
 from .mem0 import Mem0Engine
 from .rag_anything import RAGAnythingEngine
-
-
-def get_engine(memory: MemoryConfig) -> tuple[EngineBase, CanonStore]:
-    """Get engine instance and its canonical store for config."""
-    store = CanonStore(
-        memory.settings.database_url, attachments_path=memory.settings.attachments_path
-    )
-
-    match memory.engine:
-        case Engine.CHAT_HISTORY:
-            from kbm.engines.chat_history import ChatHistoryEngine
-
-            return ChatHistoryEngine(memory, store), store
-        case Engine.MEM0:
-            from kbm.engines.mem0 import Mem0Engine
-
-            return Mem0Engine(memory, store), store
-        case Engine.RAG_ANYTHING:
-            from kbm.engines.rag_anything import RAGAnythingEngine
-
-            return RAGAnythingEngine(memory, store), store
-        case _:
-            raise NotImplementedError(f"Unsupported engine: {memory.config.engine}")

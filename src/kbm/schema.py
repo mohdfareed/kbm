@@ -1,6 +1,15 @@
-"""MCP tool surface schemas: descriptions and annotations for engine operations."""
+"""Model-facing schema — every constant, type, and model an LLM sees.
 
-__all__: list[str] = []  # no public API - consumed only by base_engine
+This is the single source of truth for tool descriptions, annotations,
+parameter types, and response models surfaced via MCP.
+
+* **Tool descriptions** are passed as ``description=`` to ``@tool``.
+* **Tool annotations** (``ToolAnnotations``) hint client behaviour.
+* **Annotated parameter types** become ``inputSchema`` entries.
+* **Pydantic response models** become ``outputSchema`` entries.
+"""
+
+__all__: list[str] = []
 
 from datetime import datetime
 from typing import Annotated
@@ -9,70 +18,41 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
 # MARK: Tool descriptions
-# The user-facing text that describes each tool's purpose and behavior.
 
 INFO_DESCRIPTION = (
     "Get knowledge base metadata.\n\n"
     "Returns engine type, record count, and configuration details."
 )
-
 QUERY_DESCRIPTION = "Search the knowledge base."
-
 INSERT_DESCRIPTION = "Add text content to the knowledge base."
-
 INSERT_FILE_DESCRIPTION = (
     "Add a file to the knowledge base.\n\n"
     "Supports PDF, images, and other document formats\n"
     "depending on engine."
 )
-
 DELETE_DESCRIPTION = "Remove a record from the knowledge base."
-
 GET_RECORD_DESCRIPTION = (
     "Retrieve a specific record by ID.\n\n"
     "Returns the full record content, useful for inspecting "
     "before deletion or viewing complete data."
 )
-
 LIST_RECORDS_DESCRIPTION = "List records in the knowledge base."
 
 # MARK: Tool annotations
-#   readOnlyHint    → clients may skip confirmation
-#   destructiveHint → clients may warn before executing
-#   idempotentHint  → clients may retry safely
 
-INFO_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    openWorldHint=False,
-)
-QUERY_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    openWorldHint=False,
-)
-INSERT_ANNOTATIONS = ToolAnnotations(
-    destructiveHint=False,
-    idempotentHint=False,
-)
-INSERT_FILE_ANNOTATIONS = ToolAnnotations(
-    destructiveHint=False,
-    idempotentHint=False,
-)
-DELETE_ANNOTATIONS = ToolAnnotations(
-    destructiveHint=True,
-)
+INFO_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+QUERY_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+INSERT_ANNOTATIONS = ToolAnnotations(destructiveHint=False, idempotentHint=False)
+INSERT_FILE_ANNOTATIONS = ToolAnnotations(destructiveHint=False, idempotentHint=False)
+DELETE_ANNOTATIONS = ToolAnnotations(destructiveHint=True)
 GET_RECORD_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    openWorldHint=False,
-    idempotentHint=True,
+    readOnlyHint=True, openWorldHint=False, idempotentHint=True
 )
 LIST_RECORDS_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    openWorldHint=False,
-    idempotentHint=True,
+    readOnlyHint=True, openWorldHint=False, idempotentHint=True
 )
 
 # MARK: Parameter types
-# JSON-schema descriptions that models receive
 
 QueryText = Annotated[
     str,
@@ -109,7 +89,7 @@ Offset = Annotated[
     Field(description="Number of records to skip for pagination."),
 ]
 
-# MARK: Return types
+# MARK: Response models
 
 
 class InfoResponse(BaseModel):
@@ -127,7 +107,6 @@ class InfoResponse(BaseModel):
 
 class QueryResult(BaseModel):
     content: str = Field(description="Matching record content.")
-    # Optional query result metadata
     id: str | None = Field(
         default=None, description="Unique record identifier, if available."
     )
