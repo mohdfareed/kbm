@@ -7,7 +7,7 @@ import typer
 from kbm.config import MemoryConfig
 
 from . import MemoryNameArg, app, console
-from .helpers import format_config, print_summary
+from .helpers import dump_display, format_config, print_summary
 
 
 @app.command()
@@ -26,5 +26,5 @@ def status(
         sys.exit(0)
 
     print_summary(memory)
-    for line in format_config(memory.dump(full=full)):
+    for line in format_config(dump_display(memory, active_only=not full)):
         console.print(f"  {line}")

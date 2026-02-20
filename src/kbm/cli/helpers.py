@@ -1,6 +1,7 @@
 """CLI helpers: logging and display utilities."""
 
 __all__ = [
+    "dump_display",
     "format_config",
     "print_invalid",
     "print_status",
@@ -10,13 +11,14 @@ __all__ = [
 ]
 
 import logging
+from enum import Enum
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from rich.logging import RichHandler
 from rich.panel import Panel
 
-from kbm.config import MemoryConfig, Transport, app_settings
+from kbm.config import AuthProvider, Engine, MemoryConfig, Transport, app_settings
 
 
 def setup_logging() -> None:
@@ -71,32 +73,74 @@ def setup_file_logging(log_file: Path) -> None:
     session_logger.info("--- New Session ---")
 
 
-def format_config(data: dict) -> list[str]:
-    """Format a config dict into aligned Rich-markup lines."""
-    lines: list[str] = []
+def dump_display(memory: MemoryConfig, active_only: bool = True) -> dict:
+    """Build a display dict for a memory config, preserving Enum instances.
 
-    # Separate top-level scalars from nested sections
-    scalars: list[tuple[str, str]] = []
-    sections: list[tuple[str, list[tuple[str, str]]]] = []
+    When ``active_only`` is True, only include sections relevant to the
+    currently chosen engine, transport, and auth provider.  When False,
+    include every field (useful as a full reference/config template).
+    """
+    data = memory.model_dump(mode="python", exclude_computed_fields=True)
+
+    if not active_only:
+        return data
+
+    result: dict = {}
+
+    # Core choices (always shown)
+    result["instructions"] = memory.instructions
+    result["engine"] = memory.engine
+    result["transport"] = memory.transport
+    result["auth"] = memory.auth
+
+    # Engine-specific sub-config
+    match memory.engine:
+        case Engine.RAG_ANYTHING:
+            result["rag_anything"] = data["rag_anything"]
+        case Engine.MEM0:
+            result["mem0"] = data["mem0"]
+
+    # Transport-specific (host/port only matter for HTTP)
+    if memory.transport == Transport.HTTP:
+        result["host"] = memory.host
+        result["port"] = memory.port
+
+    # Auth-specific sub-config
+    if memory.auth != AuthProvider.NONE:
+        auth_key = f"{memory.auth.value}_auth"
+        if auth_key in data:
+            result[auth_key] = data[auth_key]
+
+    return result
+
+
+def format_config(data: dict, indent: int = 0) -> list[str]:
+    """Format a config dict into aligned Rich-markup lines, recursively."""
+    lines: list[str] = []
+    pad = "  " * indent
+
+    scalars: list[tuple[str, str, str]] = []  # (key, value, choices)
+    sections: list[tuple[str, dict]] = []
 
     for key, value in data.items():
         if isinstance(value, dict):
-            items = [(k, str(v)) for k, v in value.items()]
-            if items:
-                sections.append((key, items))
+            sections.append((key, value))
         else:
-            scalars.append((key, str(value)))
+            if isinstance(value, Enum):
+                choices = f"[dim]({', '.join(e.value for e in type(value))})[/]"
+                scalars.append((key, value.value, choices))
+            else:
+                scalars.append((key, str(value), ""))
 
-    # Top-level scalars
     if scalars:
-        w = max(len(k) for k, _ in scalars)
-        lines += [f"[dim]{k:<{w}}[/]  {v}" for k, v in scalars]
+        kw = max(len(k) for k, _, _ in scalars)
+        for k, v, choices in scalars:
+            suffix = f"  {choices}" if choices else ""
+            lines.append(f"{pad}[dim]{k:<{kw}}[/]  {v}{suffix}")
 
-    # Nested sections
     for section, items in sections:
-        lines.append(f"[dim]{section}:[/]")
-        w = max(len(k) for k, _ in items)
-        lines += [f"  [dim]{k:<{w}}[/]  {v}" for k, v in items]
+        lines.append(f"{pad}[dim]{section}:[/]")
+        lines += format_config(items, indent + 1)
 
     return lines
 

@@ -76,10 +76,6 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 
 ## TODO
 
-- [ ] **Templates**: Support using a pre-existing memory config file for `init` calls.
-  - Look for a config file at `$KBM_HOME` to use for creating new memories.
-  - The file is manually edited by the user to override certain defaults.
-  - The path is shown using the command `kbm -S`, with other app settings.
 - [ ] **Authorization**: Implement role-based access control (RBAC) for HTTP transport.
   - Define permissions per tool.
   - Add config to define role-permission and user-role mappings.
@@ -90,17 +86,21 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
 - [ ] **Re-indexing Command**: CLI command to rebuild engine indexes from canonical storage.
   - `kbm reindex <memory_name>`: Rebuilds the engine index for the specified memory using records from canonical storage.
   - Migration supported by changing engine type and re-indexing.
-- [ ] **GitHub Models Provider**: Add `Provider.GITHUB` convenience for rag-anything.
+- [ ] **GitHub Models Provider**: Add `Provider.GITHUB` convenience for engines supporting OpenAI.
   - OpenAI-compatible API at `https://models.github.ai/inference` — LLM + embeddings.
   - Auth: GitHub PAT. Useful where only GitHub/Copilot access is available (IT policy).
   - Default models: `gpt-4o-mini`, `text-embedding-3-small` (1536 dims).
   - Implemented as preset on existing OpenAI provider (set `base_url` + defaults).
-- [ ] **MCP Sampling for LLM**: Use `ctx.sample()` for rag-anything LLM calls.
+- [ ] **Documentation**: Add examples and templates to `docs/`.
+  - Add config file examples with authentication, GitHub-provided LLMs, etc.
+  - Add example docker compose files.
+- [ ] **MCP Sampling for LLM**: Use `ctx.sample()` for engine LLM calls.
   - Server borrows the client's LLM instead of direct API calls.
   - Thread FastMCP `Context` into engine pipeline (store on instance per tool call).
   - Sampling only covers text generation; embeddings still need a provider (GitHub, OpenAI, etc.).
   - Fallback to configured provider for clients that don't support sampling.
-- [ ] **Documentation**: Add examples and templates to `docs/`.
-  - Add config file examples with authentication, GitHub-provided LLMs, etc.
-  - Add example docker compose files.
-- [ ] **Display Config Options**: In `kbm status`, show possible enum values.
+- [ ] **JSON-Based Engine**: Add memory engine that stores data as JSON files.
+  - [ ] Support loading config and storing data to `./.kbm`.
+  - [ ] Store all data that replicate memory to be cloned with repo.
+  - [ ] Structure data to be easily diff-able, such as `.jsonl` format.
+  - [ ] Use MCP Sampling to build graph on top of data or some sort of intelligence that is cached.
