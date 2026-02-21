@@ -154,7 +154,10 @@ class RAGAnythingEngine(BaseEngine):
             self._rag = raganything.RAGAnything(
                 lightrag=lightrag,
                 vision_model_func=self._vision_func,
-                config=raganything.RAGAnythingConfig(),
+                config=raganything.RAGAnythingConfig(
+                    working_dir=str(self.working_dir),
+                    parser_output_dir=str(self.working_dir / "output"),
+                ),
             )
         return self._rag
 
