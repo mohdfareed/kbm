@@ -1,6 +1,6 @@
 [project]
 name = "kbm"
-version = "0.2.4"
+version = "0.3.0"
 description = "Persistent memory for LLMs, accessible via MCP."
 readme = "README.md"
 license-files = ["LICENSE*"]
