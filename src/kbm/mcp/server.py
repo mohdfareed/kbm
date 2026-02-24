@@ -9,6 +9,7 @@ from fastmcp import FastMCP, settings
 from kbm.auth import build_auth_provider
 from kbm.config import Engine, MemoryConfig, Transport
 from kbm.engines.chat_history import ChatHistoryEngine
+from kbm.engines.markdown import MarkdownEngine
 from kbm.engines.mem0 import Mem0Engine
 from kbm.engines.rag_anything import RAGAnythingEngine
 from kbm.store import CanonStore
@@ -62,6 +63,8 @@ def build_server(memory: MemoryConfig) -> FastMCP:
     match memory.engine:
         case Engine.CHAT_HISTORY:
             engine = ChatHistoryEngine(memory, store)
+        case Engine.MARKDOWN:
+            engine = MarkdownEngine(memory, store)
         case Engine.MEM0:
             engine = Mem0Engine(memory)
         case Engine.RAG_ANYTHING:

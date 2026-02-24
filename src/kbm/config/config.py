@@ -38,6 +38,7 @@ class Engine(str, Enum):
     """Available storage engines."""
 
     CHAT_HISTORY = "chat-history"
+    MARKDOWN = "markdown"
     RAG_ANYTHING = "rag-anything"
     MEM0 = "mem0"
 

@@ -43,7 +43,7 @@ $ kbm init [OPTIONS] [NAME]
 
 **Options**:
 
-* `-e, --engine [chat-history|rag-anything|mem0]`: [default: chat-history]
+* `-e, --engine [chat-history|markdown|rag-anything|mem0]`: [default: chat-history]
 * `-f, --force`: Overwrite if exists.
 * `--help`: Show this message and exit.
 
@@ -63,7 +63,7 @@ $ kbm start [OPTIONS] [NAME]
 
 **Options**:
 
-* `-e, --engine [chat-history|rag-anything|mem0]`: Memory engine.
+* `-e, --engine [chat-history|markdown|rag-anything|mem0]`: Memory engine.
 * `-t, --transport [stdio|http]`
 * `-H, --host TEXT`
 * `-p, --port INTEGER`

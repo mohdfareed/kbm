@@ -100,7 +100,3 @@ git clone https://github.com/mohdfareed/kbm && cd kbm
   - Sampling only covers text generation; embeddings still need a provider (GitHub, OpenAI, etc.).
   - Fallback to configured provider for clients that don't support sampling.
   - [ ] Use to build graph on top of JSON-based data or some sort of intelligence. This layer is cached and not committed with the JSON files.
-- [ ] **JSON-Based Engine**: Add memory engine that stores data as JSON files.
-  - [ ] Support loading config and storing data to `./.kbm`.
-  - [ ] Store all data that replicate memory to be cloned with repo.
-  - [ ] Structure data to be easily diff-able, such as `.jsonl` format.
