@@ -31,13 +31,16 @@ def run_server(memory: MemoryConfig) -> None:
                 mcp.run(transport="stdio")
 
             case Transport.HTTP:
-                logger.info(
-                    f"Starting MCP server over HTTP at {memory.host}:{memory.port}..."
-                )
+                path = memory.path.strip("/") or None
+                url = f"{memory.host}:{memory.port}"
+                if path:
+                    url += f"/{path}"
+                logger.info(f"Starting MCP server over HTTP at {url}...")
                 mcp.run(
                     transport="http",
                     host=memory.host,
                     port=memory.port,
+                    path=f"/{path}" if path else None,
                     uvicorn_config={"log_config": None},
                 )
 

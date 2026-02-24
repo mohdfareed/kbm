@@ -17,6 +17,7 @@ def start(
     transport: Transport | None = typer.Option(None, "-t", "--transport"),
     host: str | None = typer.Option(None, "-H", "--host"),
     port: int | None = typer.Option(None, "-p", "--port"),
+    path: str | None = typer.Option(None, "--path", help="URL path/subpath for HTTP."),
 ) -> None:
     """Start the MCP server."""
     try:  # Load config
@@ -37,6 +38,8 @@ def start(
         memory.host = host
     if port:
         memory.port = port
+    if path is not None:
+        memory.path = path
 
     # Start server with file logging
     print_status(memory)

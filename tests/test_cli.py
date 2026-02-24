@@ -181,6 +181,13 @@ class TestStart:
         assert capture_server["config"].host == "192.168.1.1"
         assert capture_server["config"].port == 9000
 
+    def test_path_override(self, tmp_home: Path, capture_server: dict) -> None:
+        """--path overrides config value."""
+        init_memory("srv", home=tmp_home)
+        result = invoke("start", "srv", "--path", "/api/v1/mcp", home=tmp_home)
+        assert result.exit_code == 0
+        assert capture_server["config"].path == "/api/v1/mcp"
+
     def test_engine_override(self, tmp_home: Path, capture_server: dict) -> None:
         """--engine overrides config value."""
         init_memory("srv", home=tmp_home)

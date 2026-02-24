@@ -100,10 +100,11 @@ def dump_display(memory: MemoryConfig, active_only: bool = True) -> dict:
         case Engine.MEM0:
             result["mem0"] = data["mem0"]
 
-    # Transport-specific (host/port only matter for HTTP)
+    # Transport-specific (host/port/path only matter for HTTP)
     if memory.transport == Transport.HTTP:
         result["host"] = memory.host
         result["port"] = memory.port
+        result["path"] = memory.path
 
     # Auth-specific sub-config
     if memory.auth != AuthProvider.NONE:
@@ -190,6 +191,8 @@ def _transport_label(memory: MemoryConfig) -> str:
         case Transport.STDIO:
             return "stdio"
         case Transport.HTTP:
-            return f"http://{memory.host}:{memory.port}"
+            path = memory.path.strip("/")
+            base = f"http://{memory.host}:{memory.port}"
+            return f"{base}/{path}" if path else base
         case _:
             return memory.transport.value

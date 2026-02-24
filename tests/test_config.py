@@ -78,6 +78,13 @@ class TestYamlLoading:
         cfg = MemoryConfig._from_file(f, settings=_settings())
         assert cfg.rag_anything.embedding_dim == 1536
 
+    def test_path(self, tmp_path: Path) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("transport: http\npath: /api/v1/mcp\n")
+        cfg = MemoryConfig._from_file(f, settings=_settings())
+        assert cfg.transport == Transport.HTTP
+        assert cfg.path == "/api/v1/mcp"
+
     def test_defaults_applied(self, tmp_path: Path) -> None:
         f = tmp_path / "config.yaml"
         f.write_text("")
@@ -85,6 +92,7 @@ class TestYamlLoading:
         assert cfg.engine == Engine.CHAT_HISTORY
         assert cfg.transport == Transport.STDIO
         assert cfg.port == 8000
+        assert cfg.path == "/"
 
 
 class TestSourcePriority:
@@ -114,6 +122,16 @@ class TestSourcePriority:
         )
         assert cfg.instructions == "from-init"  # init wins over yaml
         assert cfg.engine == Engine.RAG_ANYTHING  # env wins over yaml
+
+    def test_env_overrides_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        f = tmp_path / "config.yaml"
+        f.write_text("path: /original\n")
+        monkeypatch.setenv("KBM_PATH", "/from-env")
+
+        cfg = MemoryConfig._from_file(f, settings=_settings())
+        assert cfg.path == "/from-env"
 
 
 class TestSerialization:

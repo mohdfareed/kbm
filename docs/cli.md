@@ -67,6 +67,7 @@ $ kbm start [OPTIONS] [NAME]
 * `-t, --transport [stdio|http]`
 * `-H, --host TEXT`
 * `-p, --port INTEGER`
+* `--path TEXT`: URL path/subpath for HTTP.
 * `--help`: Show this message and exit.
 
 ## `kbm list`

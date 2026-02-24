@@ -131,6 +131,7 @@ class MemoryConfig(BaseAppConfig):
     transport: Transport = Transport.STDIO
     host: str = "0.0.0.0"
     port: int = 8000
+    path: str = "/"
 
     # engine settings
     engine: Engine = Engine.CHAT_HISTORY
