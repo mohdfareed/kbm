@@ -29,9 +29,9 @@ def init(
 ) -> None:
     """Create a new memory."""
     settings = MemorySettings(name=name)
-    if settings.root.exists() and not force:
+    if settings.config_file.exists() and not force:
         raise FileExistsError(f"Memory already exists: {name}")
 
     memory = create_memory(settings, engine=engine)
-    console.print(f"Initialized '{name}' with engine '{engine.value}'.")
+    console.print(f"Initialized '{name}' at: [bold]{memory.settings.config_file}[/]")
     print_summary(memory)

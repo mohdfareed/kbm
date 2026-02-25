@@ -37,6 +37,14 @@ class BaseAppSettings(BaseSettings, ABC):
             exclude_defaults=not full,
         )
 
+    def dump_json(self, full: bool = False) -> str:
+        """Dump configuration as JSON string."""
+        return json.dumps(self.dump(full=full), indent=2)
+
+    def dump_yaml(self, full: bool = False) -> str:
+        """Dump configuration as YAML string."""
+        return yaml.dump(self.dump(full=full), sort_keys=False)
+
     # Deserialization
 
     @classmethod
@@ -63,24 +71,6 @@ class BaseAppSettings(BaseSettings, ABC):
             YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file),
             file_secret_settings,
         )
-
-
-# MARK: Configuration
-# =============================================================================
-
-
-class BaseAppConfig(BaseAppSettings, ABC):
-    # Serialization
-
-    def dump_json(self, full: bool = False) -> str:
-        """Dump configuration as JSON string."""
-        return json.dumps(self.dump(full=full), indent=2)
-
-    def dump_yaml(self, full: bool = False) -> str:
-        """Dump configuration as YAML string."""
-        return yaml.dump(self.dump(full=full), sort_keys=False)
-
-    # Deserialization
 
     @classmethod
     def _from_file(cls, path: Path, **kwargs) -> Self:

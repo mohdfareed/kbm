@@ -12,13 +12,14 @@ import typer
 from rich.console import Console
 
 from kbm.config import app_settings
+from kbm.config.config import MemoryConfig
 
-from .helpers import format_config
+from .helpers import print_summary
 
 MemoryNameArg = typer.Argument(
     os.environ.get("KBM_NAME") or Path.cwd().name or socket.gethostname(),
     help="Memory name.",
-    autocompletion=lambda: [dir.name for dir in app_settings.memories],
+    autocompletion=lambda: [p.stem for p in app_settings.memories],
 )
 
 console = Console()
@@ -48,21 +49,14 @@ def main(prog_name: str | None = None) -> None:
 
 @app.callback()
 def callback(
+    version: bool = typer.Option(
+        False, "-v", "--version", help="Show version and exit."
+    ),
     debug: bool = typer.Option(
         app_settings.debug, "-d", "--debug", help="Enable debug logging."
     ),
     home: Path | None = typer.Option(
         None, "-r", "--root", help="Override home directory."
-    ),
-    # Meta options
-    settings: bool = typer.Option(
-        False, "-s", "--settings", help="Show app settings overrides and exit."
-    ),
-    full_settings: bool = typer.Option(
-        False, "-S", "--all-settings", help="Show all app settings and exit."
-    ),
-    version: bool = typer.Option(
-        False, "-v", "--version", help="Show version and exit."
     ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
@@ -77,25 +71,29 @@ def callback(
         console.print(f"{app_settings.name} {app_settings.version}")
         sys.exit(0)
 
-    if settings:
-        for line in format_config(app_settings.dump(full=False)):
-            console.print(line)
-        sys.exit(0)
-
-    if full_settings:
-        for line in format_config(app_settings.dump(full=True)):
-            console.print(line)
-        sys.exit(0)
-
 
 # MARK: Command Registration
 
 # Register commands (order determines help display)
 # isort: off
-from kbm.cli import init, start, list, status, delete, inspect  # noqa: E402
+from kbm.cli import init, start, inspect  # noqa: E402
 
 
 @app.command()
 def home() -> None:
     """Print application home directory."""
     console.print(app_settings.home)
+
+
+@app.command()
+def settings(all: bool = False) -> None:
+    """Print application settings."""
+    console.print(app_settings.dump_json(full=all))
+
+
+@app.command()
+def memory(name: str = MemoryNameArg, all: bool = False) -> None:
+    """Print application memory directory."""
+    memory = MemoryConfig.from_name(name)
+    print_summary(memory)
+    console.print(memory.dump_json(full=all))

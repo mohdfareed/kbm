@@ -22,8 +22,9 @@ def tmp_home(tmp_path: Path) -> Generator[Path, None, None]:
 
     home = tmp_path / "kbm-home"
     home.mkdir()
-    (home / "memories").mkdir()
+    (home / "config").mkdir()
     (home / "data").mkdir()
+    (home / "logs").mkdir()
     app_settings.home = home
 
     yield home

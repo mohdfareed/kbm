@@ -34,22 +34,30 @@ class AppSettings(BaseAppSettings):
 
     @computed_field
     @property
+    def config_path(self) -> Path:
+        """Directory for managed memory config files."""
+        return self.home / "config"
+
+    @computed_field
+    @property
     def logs_path(self) -> Path:
         """Root directory for memory logs storage."""
         return self.home / "logs"
 
     @computed_field
     @property
-    def memories_path(self) -> Path:
-        """Directory for managed memory config files."""
-        return self.home / "memories"
+    def data_path(self) -> Path:
+        """Root directory for memory data storage."""
+        return self.home / "data"
 
     @property
     def memories(self) -> list[Path]:
-        """List of all memory directories."""
-        if not self.memories_path.exists():
+        """List of all memory config files."""
+        if not self.config_path.exists():
             return []
-        return sorted([p for p in self.memories_path.iterdir() if p.is_dir()])
+        return sorted(
+            p for p in self.config_path.iterdir() if p.suffix in (".yaml", ".yml")
+        )
 
 
 app_settings = AppSettings()
@@ -67,43 +75,37 @@ class MemorySettings(BaseAppSettings):
 
     @computed_field
     @property
+    def config_file(self) -> Path:
+        """Path to the memory config file."""
+        return app_settings.config_path / f"{self.name}.yaml"
+
+    @computed_field
+    @property
     def log_file(self) -> Path:
         """Path to log file."""
         return app_settings.logs_path / f"{self.name}.log"
 
     @computed_field
     @property
-    def root(self) -> Path:
-        """The memory root directory."""
-        return app_settings.memories_path / self.name
-
-    @computed_field
-    @property
-    def config_file(self) -> Path:
-        """Path to the memory config file."""
-        return self.root / "config.yaml"
-
-    @computed_field
-    @property
     def data_path(self) -> Path:
         """Path to the memory data directory."""
-        return self.root / "data"
+        return app_settings.data_path / self.name
 
     @computed_field
     @property
     def attachments_path(self) -> Path:
         """Directory for file attachments."""
-        return self.root / "attachments"
+        return self.data_path / "attachments"
 
     @computed_field
     @property
     def database_url(self) -> str:
         """Database URL for canonical storage."""
-        return f"sqlite+aiosqlite:///{self.root / 'store.db'}"
+        return f"sqlite+aiosqlite:///{self.data_path / 'store.db'}"
 
     def ensure_dirs(self) -> None:
         """Ensure memory directories exist."""
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.config_file.parent.mkdir(parents=True, exist_ok=True)
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
-        self.attachments_path.mkdir(parents=True, exist_ok=True)
         self.data_path.mkdir(parents=True, exist_ok=True)
+        self.attachments_path.mkdir(parents=True, exist_ok=True)

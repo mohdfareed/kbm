@@ -7,7 +7,7 @@ from kbm.config.settings import MemorySettings
 from kbm.mcp.server import run_server
 
 from . import MemoryNameArg, app, console
-from .helpers import print_status, setup_file_logging
+from .helpers import print_summary, setup_file_logging
 
 
 @app.command()
@@ -42,6 +42,6 @@ def start(
         memory.path = path
 
     # Start server with file logging
-    print_status(memory)
+    print_summary(memory, stderr=True)  # don't interfere with stdout transport
     setup_file_logging(memory.settings.log_file)
     run_server(memory)

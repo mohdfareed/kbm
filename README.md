@@ -27,7 +27,24 @@ kbm start notes
 * Environment variables (`KBM_*`) override config. Loaded from `.env`, `.kbm.env`, or shell.
 * Data lives at `$KBM_HOME` (default: platform data dir).
   * Backup/migrate by copying this directory.
-* `kbm status <name> --full` shows all config options with defaults.
+* `kbm memory <name> --full` shows all config options with defaults.
+* Complete spec at [config.py](src/kbm/config/config.py).
+
+### Memory Resolution
+
+1. `KBM_HOME/config/<name>.yaml`
+2. `.kbm.<name>.yaml` or `.kbm.yaml` in cwd (matched by `name` key)
+3. `<name>` as a path to a YAML config file
+
+### Data Directory Layout
+
+```
+KBM_HOME/
+├── config/<name>.yaml   # memory configuration
+├── logs/<name>.log
+├── data/<name>/         # store.db, attachments/, engine data
+└── template.yaml        # optional default template
+```
 
 ## Features
 
@@ -42,7 +59,17 @@ kbm start notes
 - Enables engine migration without data loss
 - Allows rebuilding engine indexes from durable storage
 
-### Docker
+### Authentication (HTTP)
+
+When using HTTP transport, you can secure the MCP server with GitHub OAuth.
+This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
+
+**Create a GitHub OAuth App**:
+   - Go to GitHub → Settings → Developer Settings → OAuth Apps → New OAuth App
+   - Set "Authorization callback URL" to `http://your-server:8000/oauth/callback`
+   - Add the Client ID and Client Secret to the memory configuration
+
+## Docker
 
 ```sh
 # Build
@@ -54,16 +81,6 @@ tailscale funnel --bg --set-path=/memory 8000
 ```
 
 Example `docker-compose.yaml` provided in `./docker/`.
-
-### Authentication (HTTP)
-
-When using HTTP transport, you can secure the MCP server with GitHub OAuth.
-This uses OAuth 2.0 - users authenticate via GitHub, and the server validates their identity.
-
-**Create a GitHub OAuth App**:
-   - Go to GitHub → Settings → Developer Settings → OAuth Apps → New OAuth App
-   - Set "Authorization callback URL" to `http://your-server:8000/oauth/callback`
-   - Add the Client ID and Client Secret to the memory configuration
 
 ## Development
 

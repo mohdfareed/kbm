@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from kbm.config.settings import MemorySettings
 
-from .base import BaseAppConfig
+from .base import BaseAppSettings
 
 # MARK: Authentication
 # =============================================================================
@@ -115,7 +115,7 @@ SERVER_INSTRUCTIONS = (
 )
 
 
-class MemoryConfig(BaseAppConfig):
+class MemoryConfig(BaseAppSettings):
     """The configuration for a knowledge base memory."""
 
     settings: MemorySettings = Field(..., exclude=True)
@@ -154,9 +154,52 @@ class MemoryConfig(BaseAppConfig):
 
     @classmethod
     def from_name(cls, name: str, **kwargs) -> "MemoryConfig":
-        """Load a named memory config."""
+        """Load a memory config by name, local file, or path.
+
+        Resolution order:
+        1. ``KBM_HOME/config/<name>.yaml`` — managed memory.
+        2. ``./.kbm.yaml`` / ``./.kbm.<name>.yaml`` — local project config
+           whose ``name`` key matches *name*.
+        3. Treat *name* as a filesystem path to a YAML config file.
+        4. Raise ``FileNotFoundError``.
+        """
+        import yaml as _yaml
+
+        # 1. Managed config
         settings = MemorySettings(name=name)
-        return cls._from_file(settings.config_file, settings=settings, **kwargs)
+        if settings.config_file.exists():
+            return cls._from_file(settings.config_file, settings=settings, **kwargs)
+
+        # 2. Local project configs
+        cwd = Path.cwd()
+        candidates: list[tuple[Path, str | None]] = [
+            (cwd / f".kbm.{name}.yaml", name),
+            (cwd / ".kbm.yaml", None),
+        ]
+        for candidate, implicit_name in candidates:
+            if not candidate.exists():
+                continue
+            try:
+                data = _yaml.safe_load(candidate.read_text()) or {}
+                file_name = data.get("name", implicit_name)
+                if file_name == name:
+                    local_settings = MemorySettings(name=name)
+                    return cls._from_file(candidate, settings=local_settings, **kwargs)
+            except Exception:
+                continue
+
+        # 3. Explicit path to a YAML config
+        config_path = Path(name).expanduser()
+        if config_path.exists() and config_path.suffix in (".yaml", ".yml"):
+            try:
+                data = _yaml.safe_load(config_path.read_text()) or {}
+                file_name = data.get("name", config_path.stem)
+                path_settings = MemorySettings(name=file_name)
+                return cls._from_file(config_path, settings=path_settings, **kwargs)
+            except Exception:
+                pass
+
+        raise FileNotFoundError(f"Memory not found: {name}")
 
     @classmethod
     def from_template(

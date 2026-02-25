@@ -15,6 +15,7 @@ from kbm.config import MemoryConfig
 from kbm.mcp.server import build_server
 
 from . import MemoryNameArg, app, console
+from .helpers import print_summary
 
 # MARK: Model and CMD
 
@@ -39,6 +40,8 @@ def inspect(name: str = MemoryNameArg) -> None:
     """Inspect memory MCP server."""
     memory = MemoryConfig.from_name(name)
     view = asyncio.run(ServerView.introspect(memory))
+
+    print_summary(memory)
     _print_pretty(view)
 
 
@@ -118,28 +121,23 @@ def _render_tool_panel(tool: Tool) -> Panel:
         if ann:
             parts += ["  ".join(f"[dim]{k}[/]={v}" for k, v in ann.items())]
 
+    renderables: list[RenderableType] = [
+        Text.from_markup(p) if isinstance(p, str) else p  # type: ignore[misc]
+        for p in parts
+    ]
     return Panel.fit(
-        _group(parts),
+        Group(*renderables),
         title=f"[bold]{tool.name}[/]",
         title_align="left",
         border_style="blue",
     )
 
 
-def _group(parts: list[object]):
-    renderables: list[RenderableType] = [
-        Text.from_markup(p) if isinstance(p, str) else p  # type: ignore[misc]
-        for p in parts
-    ]
-    return Group(*renderables)
-
-
 def _schema_type(prop: dict) -> str:
+    def _atom(s: dict) -> str:
+        t = s.get("type", "any")
+        return f"array[{_atom(s.get('items', {}))}]" if t == "array" else str(t)
+
     if "anyOf" in prop:
         return " | ".join(_atom(t) for t in prop["anyOf"])
     return _atom(prop)
-
-
-def _atom(s: dict) -> str:
-    t = s.get("type", "any")
-    return f"array[{_atom(s.get('items', {}))}]" if t == "array" else str(t)
