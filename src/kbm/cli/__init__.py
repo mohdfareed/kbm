@@ -14,8 +14,6 @@ from rich.console import Console
 from kbm.config import app_settings
 from kbm.config.config import MemoryConfig
 
-from .helpers import print_summary
-
 MemoryNameArg = typer.Argument(
     os.environ.get("KBM_NAME") or Path.cwd().name or socket.gethostname(),
     help="Memory name.",
@@ -80,20 +78,25 @@ from kbm.cli import init, start, inspect  # noqa: E402
 
 
 @app.command()
+def version() -> None:
+    """Print application version."""
+    console.print(app_settings.version)
+
+
+@app.command()
 def home() -> None:
     """Print application home directory."""
     console.print(app_settings.home)
 
 
 @app.command()
-def settings(all: bool = False) -> None:
+def settings(all=False) -> None:
     """Print application settings."""
-    console.print(app_settings.dump_json(full=all))
+    console.print(app_settings.dump_yaml(full=all))
 
 
 @app.command()
-def memory(name: str = MemoryNameArg, all: bool = False) -> None:
+def memory(name: str = MemoryNameArg, all=False) -> None:
     """Print application memory directory."""
     memory = MemoryConfig.from_name(name)
-    print_summary(memory)
-    console.print(memory.dump_json(full=all))
+    console.print(memory.dump_yaml(full=all))

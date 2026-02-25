@@ -5,6 +5,9 @@
     "tests"
   ],
   "ruff.lineLength": 88,
+  "chat.tools.terminal.autoApprove": {
+    "uv": true
+  },
   "cSpell.words": [
     "aiosqlite",
     "asyncio",
