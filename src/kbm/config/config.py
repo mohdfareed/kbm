@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kbm.config.settings import MemorySettings
+from kbm.config.settings import MemorySettings, app_settings
 
 from .base import BaseAppSettings
 
@@ -157,6 +157,7 @@ class MemoryConfig(BaseAppSettings):
         """Load a memory config by name, local file, or path.
 
         Resolution order:
+        0. ``app_settings.config_file`` — CLI ``--config`` override.
         1. ``KBM_HOME/config/<name>.yaml`` — managed memory.
         2. ``./.kbm.yaml`` / ``./.kbm.<name>.yaml`` — local project config
            whose ``name`` key matches *name*.
@@ -164,6 +165,15 @@ class MemoryConfig(BaseAppSettings):
         4. Raise ``FileNotFoundError``.
         """
         import yaml as _yaml
+
+        # 0. CLI --config override
+        if app_settings.config_file is not None:
+            override = app_settings.config_file
+            data = _yaml.safe_load(override.read_text()) or {}
+            file_name = data.get("name", override.stem)
+            override_settings = MemorySettings(name=file_name)
+            override_settings._config_file = override
+            return cls._from_file(override, settings=override_settings, **kwargs)
 
         # 1. Managed config
         settings = MemorySettings(name=name)
@@ -184,6 +194,7 @@ class MemoryConfig(BaseAppSettings):
                 file_name = data.get("name", implicit_name)
                 if file_name == name:
                     local_settings = MemorySettings(name=name)
+                    local_settings._config_file = candidate
                     return cls._from_file(candidate, settings=local_settings, **kwargs)
             except Exception:
                 continue
@@ -195,6 +206,7 @@ class MemoryConfig(BaseAppSettings):
                 data = _yaml.safe_load(config_path.read_text()) or {}
                 file_name = data.get("name", config_path.stem)
                 path_settings = MemorySettings(name=file_name)
+                path_settings._config_file = config_path
                 return cls._from_file(config_path, settings=path_settings, **kwargs)
             except Exception:
                 pass

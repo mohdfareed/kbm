@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import typer
-from pydantic import computed_field
+from pydantic import PrivateAttr, computed_field
 
 from .base import BaseAppSettings
 
@@ -25,6 +25,7 @@ class AppSettings(BaseAppSettings):
 
     debug: bool = False
     home: Path = Path(typer.get_app_dir(name))
+    config_file: Path | None = None
 
     @computed_field
     @property
@@ -55,9 +56,9 @@ class AppSettings(BaseAppSettings):
         """List of all memory config files."""
         if not self.config_path.exists():
             return []
-        return sorted(
-            p for p in self.config_path.iterdir() if p.suffix in (".yaml", ".yml")
-        )
+
+        dirs = [*self.config_path.iterdir(), Path.cwd(), Path.cwd() / ".kbm"]
+        return sorted(p for p in dirs if p.suffix in (".yaml", ".yml"))
 
 
 app_settings = AppSettings()
@@ -73,10 +74,15 @@ class MemorySettings(BaseAppSettings):
     name: str
     """The unique name/ID of this memory instance."""
 
+    _config_file: Path | None = PrivateAttr(default=None)
+    """Override for the config file path (set by factory methods)."""
+
     @computed_field
     @property
     def config_file(self) -> Path:
         """Path to the memory config file."""
+        if self._config_file is not None:
+            return self._config_file
         return app_settings.config_path / f"{self.name}.yaml"
 
     @computed_field

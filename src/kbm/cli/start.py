@@ -2,7 +2,8 @@
 
 import typer
 
-from kbm.config import Engine, MemoryConfig, Transport
+from kbm.config import Engine, Transport
+from kbm.config.config import MemoryConfig
 from kbm.config.settings import MemorySettings
 from kbm.mcp.server import run_server
 

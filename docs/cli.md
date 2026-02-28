@@ -13,6 +13,7 @@ $ kbm [OPTIONS] COMMAND [ARGS]...
 * `-v, --version`: Show version and exit.
 * `-d, --debug`: Enable debug logging.
 * `-r, --root PATH`: Override home directory.
+* `-c, --config FILE`: Path to a memory config file.
 * `--help`: Show this message and exit.
 
 **Commands**:

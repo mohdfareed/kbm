@@ -12,7 +12,6 @@ import typer
 from rich.console import Console
 
 from kbm.config import app_settings
-from kbm.config.config import MemoryConfig
 
 MemoryNameArg = typer.Argument(
     os.environ.get("KBM_NAME") or Path.cwd().name or socket.gethostname(),
@@ -56,6 +55,15 @@ def callback(
     home: Path | None = typer.Option(
         None, "-r", "--root", help="Override home directory."
     ),
+    config: Path | None = typer.Option(
+        None,
+        "-c",
+        "--config",
+        help="Path to a memory config file.",
+        exists=True,
+        dir_okay=False,
+        resolve_path=True,
+    ),
 ) -> None:
     """Persistent memory for LLMs via MCP."""
     from .helpers import setup_logging
@@ -63,6 +71,8 @@ def callback(
     app_settings.debug = debug
     if home is not None:
         app_settings.home = home.expanduser().resolve()
+    if config is not None:
+        app_settings.config_file = config
     setup_logging()
 
     if version:
@@ -98,5 +108,7 @@ def settings(all=False) -> None:
 @app.command()
 def memory(name: str = MemoryNameArg, all=False) -> None:
     """Print application memory directory."""
+    from kbm.config import MemoryConfig
+
     memory = MemoryConfig.from_name(name)
     console.print(memory.dump_yaml(full=all))
